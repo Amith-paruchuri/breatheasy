@@ -1,0 +1,64 @@
+# Automatic deploys: every push to the main branch on GitHub runs this in Cloud Build.
+# Tests first (a failing change never goes live), then build the image and roll it out
+# to the existing Cloud Run service. Env vars, secrets and the database connection
+# set by deploy/cloudrun/deploy.sh are kept as they are.
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: breatheasy
+  _REPO: breatheasy
+  _DATA_BUCKET: ${PROJECT_ID}-breatheasy-data
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+
+timeout: 2400s
+
+steps:
+  - id: tests
+    name: python:3.12-slim
+    dir: backend
+    entrypoint: bash
+    args:
+      - -c
+      - pip install -q -r requirements.lock pytest pytest-asyncio && python -m pytest -q
+
+  # Street-level map layer (parks, lakes, main roads) from OpenStreetMap. Kept in a
+  # bucket so it is built once, not on every deploy. Delete the bucket file to refresh it.
+  - id: map-layer
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        OUT=backend/app/data/environment.json.gz
+        mkdir -p backend/app/data
+        gcloud storage buckets describe gs://${_DATA_BUCKET} >/dev/null 2>&1 \
+          || gcloud storage buckets create gs://${_DATA_BUCKET} --location=${_REGION} --uniform-bucket-level-access
+        if gcloud storage cp gs://${_DATA_BUCKET}/environment.json.gz $$OUT 2>/dev/null; then
+          echo "Using the saved map layer"
+        elif python3 backend/scripts/build_environment.py; then
+          gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz
+        else
+          echo "WARNING: map layer unavailable; deploying without park and road context"
+        fi
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/app:${SHORT_SHA}", "."]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/app:${SHORT_SHA}"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/app:${SHORT_SHA}
+      - --region=${_REGION}
+

@@ -1,0 +1,29 @@
+# Production-like local run: Postgres + the production image on http://localhost:8080
+#   cp backend/.env.example .env.compose   (then edit; PROVIDER=open works with no keys)
+#   docker compose up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: breatheasy
+      POSTGRES_USER: breatheasy
+      POSTGRES_PASSWORD: localdev
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U breatheasy"]
+      interval: 2s
+      retries: 20
+  app:
+    build: .
+    env_file: [.env.compose]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://breatheasy:localdev@db:5432/breatheasy
+      # Local HTTP: the production image sets ENV=production, which needs HTTPS for
+      # its __Host- session cookie. Development mode keeps everything else identical.
+      ENV: development
+    ports: ["8080:8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:

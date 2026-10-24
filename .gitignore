@@ -1,0 +1,13 @@
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+.env.local
+.env.compose
+backend/data/
+backend/static/
+deploy/cloudrun/deploy.env
+*.pyc
+*.zip
