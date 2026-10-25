@@ -1779,3 +1779,70 @@ a {
   justify-content: center;
   font-size: 13px;
 }
+
+/* ============ PM2.5 legend and line ============ */
+.legend {
+  grid-template-columns: auto 200px;
+}
+.legend-title small {
+  display: block;
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--fog);
+}
+.legend-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.legend .legend-ticks {
+  position: relative;
+  display: block;
+  height: 12px;
+  padding: 0;
+}
+.legend-ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  line-height: 12px;
+}
+.legend-ticks span.is-limit {
+  color: var(--ink);
+  font-weight: 700;
+}
+.legend-note {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fog);
+}
+.bsheet .legend {
+  grid-template-columns: auto 1fr;
+}
+.is-mobile .stage .legend {
+  display: grid;
+  right: auto;
+  left: 12px;
+  bottom: auto;
+  top: calc(env(safe-area-inset-top) + 68px);
+  padding: 6px 8px 4px;
+  grid-template-columns: auto 150px;
+  font-size: 10px;
+}
+.rcard-pm {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--fog);
+  font-variant-numeric: tabular-nums;
+}
+.rcard-pm span {
+  color: var(--worse);
+  font-weight: 600;
+}
+.is-mobile .stage .legend-ticks span:nth-child(3),
+.is-mobile .stage .legend-ticks span:nth-child(5),
+.is-mobile .stage .legend-ticks span:nth-child(6) {
+  display: none;
+}

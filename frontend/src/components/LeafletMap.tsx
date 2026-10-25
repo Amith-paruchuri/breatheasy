@@ -1,7 +1,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
-import { aqiColor } from "../format";
+import { pm25Color } from "../format";
 import type { MapProps } from "./RouteMap";
 
 /**
@@ -58,7 +58,7 @@ export function LeafletMap({ routes, selectedId, onSelect, origin, destination, 
       for (const s of sel.segments) {
         L.polyline(
           s.path.map((p) => [p.lat, p.lng] as [number, number]),
-          { color: aqiColor(s.aqi), opacity: 1, weight: 7 },
+          { color: pm25Color(s.pm25), opacity: 1, weight: 7 },
         )
           .bindTooltip(`AQI ${s.aqi ?? "no data"} (${s.aqi_category ?? "unknown"}), ${Math.max(1, Math.round(s.duration_s / 60))} min`, { sticky: true })
           .addTo(g);

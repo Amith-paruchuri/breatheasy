@@ -11,7 +11,7 @@ import { RouteCard, RouteCardSkeleton } from "./components/RouteCard";
 import { RouteMap, type FitPadding } from "./components/RouteMap";
 import { SchematicMap } from "./components/SchematicMap";
 import { ModePicker, TripSettings, settingsSummary } from "./components/TripControls";
-import { AQI_BANDS, MODE_LABEL, aqiLabel, fmtTime, googleMapsUrl } from "./format";
+import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, fmtTime, googleMapsUrl } from "./format";
 import { useIsDesktop, useOnline } from "./hooks";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import type { AppConfig, Place, Preference, RouteOut, RouteResponse, TravelMode } from "./types";
@@ -79,20 +79,35 @@ export function Mark({ size = 36 }: { size?: number }) {
   );
 }
 
-function Legend() {
+function Legend({ explain = false }: { explain?: boolean }) {
+  const n = PM25_BANDS.length;
   return (
-    <div className="legend" aria-label="Air Quality Index colour scale (India, CPCB)">
-      <span className="legend-title">AQI</span>
-      <div className="legend-bar">
-        {AQI_BANDS.map((b) => (
-          <i key={b.label} style={{ background: b.color }} title={b.label} />
-        ))}
+    <div className="legend" aria-label="Map colours: PM2.5 in micrograms per cubic metre of air">
+      <span className="legend-title">
+        PM2.5 <small>µg/m³</small>
+      </span>
+      <div className="legend-scale">
+        <div className="legend-bar">
+          {PM25_BANDS.map((b) => (
+            <i key={b.max} style={{ background: b.color }} title={b.label} />
+          ))}
+        </div>
+        <div className="legend-ticks" aria-hidden>
+          {PM25_BANDS.slice(0, -1).map((b, i) => (
+            <span key={b.max} style={{ left: `${((i + 1) / n) * 100}%` }} className={b.max === PM25_SAFE_LIMIT ? "is-limit" : ""}>
+              {b.max}
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="legend-ticks" aria-hidden>
-        {AQI_BANDS.slice(0, -1).map((b) => (
-          <span key={b.max}>{b.max}</span>
-        ))}
-      </div>
+      {explain && (
+        <p className="legend-note">
+          The map is coloured by PM2.5: the weight of fine dust and smoke particles in one cubic metre of air, in
+          micrograms (µg/m³). India's safe limit is {PM25_SAFE_LIMIT} (WHO's is 15), so anything orange or red is
+          above it. The AQI number on each route is the overall air-quality score built from PM2.5 and other
+          pollutants.
+        </p>
+      )}
     </div>
   );
 }
@@ -269,7 +284,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const me = acct.me;
   const fitPadding: FitPadding = desktop
     ? { top: 56, right: 56, bottom: 56, left: 470 }
-    : { top: collapsed ? 84 : 250, right: 28, bottom: 28, left: 28 };
+    : { top: collapsed ? 128 : 250, right: 28, bottom: 28, left: 28 };
   // On phones the map ends where the sheet begins, so the whole route (and the
   // map providers' required attribution) stays visible above it.
   const stageBottom = desktop || searching ? 0 : Math.min(heights()[snap], heights().half);
@@ -397,7 +412,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             fastest={r.id === result.fastest_id}
             departure={result.data.departure_time}
             onSelect={() => select(r.id)}
-            navigateUrl={googleMapsUrl(r, origin!.location, destination!.location, mode)}
+            navigateUrl={googleMapsUrl(r, fastestRoute, origin!.location, destination!.location, mode)}
             onNavigate={() => onNavigate(r)}
             navigateHint={me ? (loggedRoutes.has(r.id) ? "Added to your trip log." : "We'll add this trip to your log.") : undefined}
             compact={!desktop}
@@ -644,7 +659,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                   <summary>
                     <Icon name="info" size={16} /> About this data
                   </summary>
-                  <Legend />
+                  <Legend explain />
                   {footer}
                   {legal}
                 </details>

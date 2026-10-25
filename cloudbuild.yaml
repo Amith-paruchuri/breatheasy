@@ -23,26 +23,57 @@ steps:
       - -c
       - pip install -q -r requirements.lock pytest pytest-asyncio && python -m pytest -q
 
-  # Street-level map layer (parks, lakes, main roads) from OpenStreetMap. Kept in a
-  # bucket so it is built once, not on every deploy. Delete the bucket file to refresh it.
-  - id: map-layer
+  # Street-level map layer (parks, lakes, main roads) from OpenStreetMap. Built once
+  # and kept in a bucket. If the bucket has none yet, it is copied out of the version
+  # that is live now; only if that fails is it rebuilt from OpenStreetMap (time-limited,
+  # so a slow map server can never block a deploy). Delete the bucket file to refresh it.
+  - id: map-layer-saved
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: bash
     args:
       - -c
       - |
-        set -e
-        OUT=backend/app/data/environment.json.gz
         mkdir -p backend/app/data
         gcloud storage buckets describe gs://${_DATA_BUCKET} >/dev/null 2>&1 \
           || gcloud storage buckets create gs://${_DATA_BUCKET} --location=${_REGION} --uniform-bucket-level-access
-        if gcloud storage cp gs://${_DATA_BUCKET}/environment.json.gz $$OUT 2>/dev/null; then
-          echo "Using the saved map layer"
-        elif python3 backend/scripts/build_environment.py; then
-          gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz
+        if gcloud storage cp gs://${_DATA_BUCKET}/environment.json.gz backend/app/data/environment.json.gz 2>/dev/null; then
+          echo "Using the saved map layer"; touch /workspace/.map_saved
         else
-          echo "WARNING: map layer unavailable; deploying without park and road context"
+          gcloud run services describe ${_SERVICE} --region=${_REGION} \
+            --format='value(spec.template.spec.containers[0].image)' > /workspace/.live_image 2>/dev/null || true
+          echo "No saved map layer; live image: $$(cat /workspace/.live_image 2>/dev/null)"
         fi
+
+  - id: map-layer-from-live
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        OUT=backend/app/data/environment.json.gz
+        IMG=$$(cat /workspace/.live_image 2>/dev/null)
+        if [ ! -f $$OUT ] && [ -n "$$IMG" ]; then
+          docker pull -q "$$IMG" && CID=$$(docker create "$$IMG") \
+            && docker cp "$$CID:/app/app/data/environment.json.gz" $$OUT \
+            && echo "Copied the map layer from the live version" || echo "Live version has no map layer"
+          [ -n "$$CID" ] && docker rm "$$CID" >/dev/null || true
+        fi
+        true
+
+  - id: map-layer-finish
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        OUT=backend/app/data/environment.json.gz
+        [ -f /workspace/.map_saved ] && exit 0
+        if [ ! -f $$OUT ] && ! timeout 1200 python3 backend/scripts/build_environment.py; then
+          rm -f $$OUT
+          echo "WARNING: map layer unavailable; deploying without park and road context"
+          exit 0
+        fi
+        gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz && echo "Saved the map layer for future deploys"
 
   - id: build
     name: gcr.io/cloud-builders/docker

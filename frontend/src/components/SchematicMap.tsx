@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { aqiColor } from "../format";
+import { pm25Color } from "../format";
 import type { MapProps } from "./RouteMap";
 
 /**
@@ -82,7 +82,7 @@ export function SchematicMap({ routes, selectedId, onSelect, origin, destination
                 key={i}
                 points={line(s.path)}
                 fill="none"
-                stroke={aqiColor(s.aqi)}
+                stroke={pm25Color(s.pm25)}
                 strokeWidth={12}
                 strokeLinejoin="round"
                 strokeLinecap="round"

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
   aqiColor,
+  pm25Color,
+  PM25_SAFE_LIMIT,
   aqiInk,
   aqiLabel,
   fmtDistance,
@@ -10,7 +12,7 @@ import {
 import type { Highlight, RouteOut } from "../types";
 import { Icon } from "./Icon";
 
-/** AQI along the journey: colour at each point is the air there, laid out by
+/** PM2.5 along the journey: colour at each point is the air there, laid out by
  * minutes travelled, blended so it reads as one continuous ribbon. */
 export function AirRibbon({
   route,
@@ -27,19 +29,19 @@ export function AirRibbon({
   const stops: string[] = [];
   for (const s of route.segments) {
     const mid = ((t + s.duration_s / 2) / total) * 100;
-    stops.push(`${aqiColor(s.aqi)} ${mid.toFixed(1)}%`);
+    stops.push(`${pm25Color(s.pm25)} ${mid.toFixed(1)}%`);
     t += s.duration_s;
   }
   const bg =
     stops.length > 1
       ? `linear-gradient(90deg, ${stops.join(", ")})`
-      : aqiColor(route.segments[0]?.aqi ?? null);
+      : pm25Color(route.segments[0]?.pm25 ?? null);
   return (
     <div
       className={`ribbon${ghost ? " ghost" : ""}`}
       style={{ width: `${width}%`, background: bg }}
       role="img"
-      aria-label={`Air quality along this route: average AQI ${route.mean_aqi ?? "unknown"}, worst ${route.peak_aqi ?? "unknown"}`}
+      aria-label={`PM2.5 along this route: average ${route.mean_pm25 ?? "unknown"} µg/m³, worst ${route.peak_pm25 ?? "unknown"}`}
     />
   );
 }
@@ -97,6 +99,10 @@ export function RouteCard({
         : d < 0
           ? `AQI ${Math.abs(d)} lower than the fastest route`
           : `AQI ${d} higher than the fastest route`;
+  const pms = route.segments.map((x) => x.pm25).filter((v): v is number => v != null);
+  const lo = pms.length ? Math.round(Math.min(...pms)) : null;
+  const hi = pms.length ? Math.round(Math.max(...pms)) : null;
+  const pmRange = lo == null ? null : lo === hi ? `${lo}` : `${lo}–${hi}`;
   const scaleTo = Math.max(route.duration_s, fastestRoute?.duration_s ?? 0);
   const longer =
     !fastest &&
@@ -180,6 +186,14 @@ export function RouteCard({
 
       <div className="ribbons">
         <AirRibbon route={route} scaleTo={scaleTo} />
+        {pmRange && (
+          <p className="rcard-pm">
+            PM2.5 {pmRange} µg/m³
+            {route.mean_pm25 != null && route.mean_pm25 > PM25_SAFE_LIMIT && (
+              <span> · {(route.mean_pm25 / PM25_SAFE_LIMIT).toFixed(1)}× safe limit</span>
+            )}
+          </p>
+        )}
         {!fastest && fastestRoute && selected && details && (
           <div className="ribbon-row">
             <AirRibbon route={fastestRoute} ghost scaleTo={scaleTo} />
@@ -247,8 +261,11 @@ export function RouteCard({
             <Icon name="navigate" size={18} />
             Start in Google Maps
           </a>
-          {navigateHint && details && (
-            <p className="rcard-hint">{navigateHint}</p>
+          {details && (
+            <p className="rcard-hint">
+              Google Maps follows these same streets. Its time can differ by a few minutes because it uses live traffic.
+              {navigateHint ? ` ${navigateHint}` : ""}
+            </p>
           )}
         </div>
       )}

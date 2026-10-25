@@ -1,6 +1,6 @@
 import { AdvancedMarker, Circle, Map, Pin, Polyline, useMap } from "@vis.gl/react-google-maps";
 import { useEffect } from "react";
-import { aqiColor } from "../format";
+import { pm25Color } from "../format";
 import type { LatLng, RouteOut } from "../types";
 
 export interface MapProps {
@@ -82,7 +82,7 @@ export function RouteMap({ routes, selectedId, onSelect, origin, destination, ma
         <>
           <Polyline encodedPath={selected.encoded_polyline} strokeColor="#0f2a3a" strokeOpacity={0.7} strokeWeight={12} zIndex={2} />
           {selected.segments.map((s, i) => (
-            <Polyline key={`${selected.id}-${i}`} path={s.path} strokeColor={aqiColor(s.aqi)} strokeOpacity={1} strokeWeight={7} zIndex={3} />
+            <Polyline key={`${selected.id}-${i}`} path={s.path} strokeColor={pm25Color(s.pm25)} strokeOpacity={1} strokeWeight={7} zIndex={3} />
           ))}
           {selected.hotspots.map((h, i) => (
             <Circle
