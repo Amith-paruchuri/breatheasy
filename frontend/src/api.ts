@@ -2,6 +2,7 @@ import type {
   AppConfig,
   LatLng,
   Me,
+  PlanStatus,
   Place,
   Preference,
   RouteResponse,
@@ -119,7 +120,7 @@ export async function planRoutes(q: RouteQuery, signal?: AbortSignal, timeoutMs 
 }
 
 // ---------- account ----------
-export const getMe = () => req<{ user: Me | null; accounts_enabled: boolean }>("/api/me");
+export const getMe = () => req<{ user: Me | null; accounts_enabled: boolean; plan?: PlanStatus | null }>("/api/me");
 export const signInWithGoogle = (credential: string) =>
   req<{ user: Me }>("/api/auth/google", json("POST", { credential }));
 export const signOut = () => req<void>("/api/auth/logout", json("POST"));
@@ -138,3 +139,21 @@ export const logTrip = (t: TripIn) => req<TripOut>("/api/me/trips", json("POST",
 export const removeTrip = (id: string) => req<void>(`/api/me/trips/${encodeURIComponent(id)}`, json("DELETE"));
 export const clearTrips = () => req<void>("/api/me/trips", json("DELETE"));
 export const getSummary = () => req<Summary>("/api/me/summary");
+
+// ---------- Breatheasy Plus (Razorpay) ----------
+export interface Subscription {
+  subscription_id: string;
+  key_id: string;
+  amount_inr: number;
+  name: string;
+  email: string;
+}
+export const subscribe = (period: "monthly" | "yearly") =>
+  req<Subscription>("/api/billing/subscribe", json("POST", { period }));
+export const verifyPayment = (p: {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
+  period: "monthly" | "yearly";
+}) => req<{ plan: string; plus_until: string | null }>("/api/billing/verify", json("POST", p));
+export const cancelPlus = () => req<{ plan: string; plus_until: string | null }>("/api/billing/cancel", json("POST"));

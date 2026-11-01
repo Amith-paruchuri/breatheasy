@@ -179,6 +179,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           ctrl.signal,
         );
         setResult(res);
+        if (res.plan && res.plan.plan !== "anonymous") acct.setPlan({ ...res.plan, street_level: res.plan.used < res.plan.limit });
         setSelectedId(res.recommended_id);
         setLoggedRoutes(new Set());
         setResultKey((k) => k + 1);
@@ -688,6 +689,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       {showAccount && config.accounts_enabled && (
         <AccountPanel
           clientId={config.google_oauth_client_id}
+          plans={config.plans}
           onClose={() => setShowAccount(false)}
           onUsePlace={(p, as) => {
             const place = { label: p.label, location: { lat: p.lat, lng: p.lng } };

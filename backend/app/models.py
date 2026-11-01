@@ -130,6 +130,14 @@ class DataInfo(BaseModel):
     resolution_note: str
 
 
+class PlanStatus(BaseModel):
+    plan: str  # "anonymous" | "free" | "plus"
+    street_level: bool  # this search used street-level (Google) data
+    used: int  # street-level searches used this month
+    limit: int  # street-level searches included per month
+    plus_until: datetime | None = None
+
+
 class RouteResponse(BaseModel):
     routes: list[RouteOut]
     recommended_id: str
@@ -140,6 +148,7 @@ class RouteResponse(BaseModel):
     data: DataInfo
     usage: Usage
     warnings: list[str] = []
+    plan: PlanStatus | None = None
 
 
 class PlaceSuggestion(BaseModel):

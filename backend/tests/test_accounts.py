@@ -52,7 +52,7 @@ def test_signed_out_state(client):
     c = client
     c.cookies.clear()
     r = c.get("/api/me").json()
-    assert r == {"user": None, "accounts_enabled": True}
+    assert r == {"user": None, "accounts_enabled": True, "plan": None}
     assert c.get("/api/me/trips").status_code == 401
 
 

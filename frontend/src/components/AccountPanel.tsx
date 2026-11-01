@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import * as api from "../api";
 import { GoogleSignInButton, useAccount } from "../account";
 import { MODE_LABEL, fmtDistance, fmtDuration } from "../format";
-import type { Summary, TravelMode, TripOut } from "../types";
+import type { PlansConfig, Summary, TravelMode, TripOut } from "../types";
+import { PlanCard } from "./PlanCard";
 
 interface Props {
   clientId: string;
+  plans?: PlansConfig;
   onClose: () => void;
   onUsePlace: (p: { label: string; lat: number; lng: number }, as: "origin" | "destination") => void;
 }
@@ -14,7 +16,7 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export function AccountPanel({ clientId, onClose, onUsePlace }: Props) {
+export function AccountPanel({ clientId, plans, onClose, onUsePlace }: Props) {
   const acct = useAccount();
   const { me, places } = acct;
   const [trips, setTrips] = useState<TripOut[] | null>(null);
@@ -102,6 +104,8 @@ export function AccountPanel({ clientId, onClose, onUsePlace }: Props) {
                 <span>{me.email}</span>
               </div>
             </div>
+
+            {plans && <PlanCard plans={plans} />}
 
             {summary && (
               <div className="summary-grid">

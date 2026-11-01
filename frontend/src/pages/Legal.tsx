@@ -84,6 +84,10 @@ export function PrivacyPage() {
         </li>
         <li>Google Identity Services (sign-in).</li>
         <li>
+          Razorpay (payments for Breatheasy Plus, when offered). Razorpay collects your payment details directly; we
+          never see or store card or bank details. We keep only your subscription ID, plan and renewal date.
+        </li>
+        <li>
           When Google data is unavailable, route requests may be sent instead to OpenStreetMap-based services
           (FOSSGIS routing, Photon search, CARTO map tiles) and Open-Meteo for air quality. These requests contain the
           coordinates needed for the route, not your account details.
@@ -143,6 +147,13 @@ export function TermsPage() {
           your doctor's guidance.
         </li>
       </ul>
+      <h2>Breatheasy Plus</h2>
+      <p>
+        Plus is a subscription that renews automatically each month or year until you cancel. You can cancel renewal
+        at any time from your account; Plus then stays on until the end of the period you paid for. Payments are
+        processed by Razorpay. The free plan and Plus include a monthly number of street-level searches; after that,
+        searches use open data until the next month. Prices include applicable taxes unless shown otherwise.
+      </p>
       <h2>Acceptable use</h2>
       <p>
         Don't misuse the service: no automated scraping, no attempts to overload or break it, no use that violates the

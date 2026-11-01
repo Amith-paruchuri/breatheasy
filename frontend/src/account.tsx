@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as api from "./api";
-import type { Me, SavedPlace } from "./types";
+import type { Me, PlanStatus, SavedPlace } from "./types";
 
 interface AccountState {
   enabled: boolean;
   me: Me | null;
+  plan: PlanStatus | null;
+  setPlan: (p: PlanStatus | null) => void;
   loading: boolean;
   places: SavedPlace[];
   error: string | null;
@@ -19,6 +21,7 @@ const Ctx = createContext<AccountState | null>(null);
 
 export function AccountProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
+  const [plan, setPlan] = useState<PlanStatus | null>(null);
   const [loading, setLoading] = useState(enabled);
   const [places, setPlaces] = useState<SavedPlace[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function AccountProvider({ enabled, children }: { enabled: boolean; child
     try {
       const r = await api.getMe();
       setMe(r.user);
+      setPlan(r.plan ?? null);
       if (r.user) await refreshPlaces();
       else setPlaces([]);
     } catch {
@@ -56,6 +60,7 @@ export function AccountProvider({ enabled, children }: { enabled: boolean; child
         const r = await api.signInWithGoogle(credential);
         setMe(r.user);
         await refreshPlaces();
+        api.getMe().then((m) => setPlan(m.plan ?? null)).catch(() => undefined);
       } catch (e) {
         setError((e as Error).message);
       }
@@ -69,13 +74,14 @@ export function AccountProvider({ enabled, children }: { enabled: boolean; child
     } finally {
       window.google?.accounts.id.disableAutoSelect();
       setMe(null);
+      setPlan(null);
       setPlaces([]);
     }
   }, []);
 
   const value = useMemo(
-    () => ({ enabled, me, loading, places, error, signIn, signOut, reload, refreshPlaces, setError }),
-    [enabled, me, loading, places, error, signIn, signOut, reload, refreshPlaces],
+    () => ({ enabled, me, plan, setPlan, loading, places, error, signIn, signOut, reload, refreshPlaces, setError }),
+    [enabled, me, plan, loading, places, error, signIn, signOut, reload, refreshPlaces],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

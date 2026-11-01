@@ -48,6 +48,13 @@ class User(Base):
     session_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    # Plans: "free" or "plus"; Plus is active while plus_until is in the future.
+    plan: Mapped[str] = mapped_column(String(16), default="free", server_default="free", nullable=False)
+    plus_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    razorpay_subscription_id: Mapped[str | None] = mapped_column(String(64))
+    # Street-level searches used in street_month ("YYYY-MM", India time).
+    street_month: Mapped[str] = mapped_column(String(7), default="", server_default="", nullable=False)
+    street_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
     places: Mapped[list[SavedPlace]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True

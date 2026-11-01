@@ -97,12 +97,12 @@ def content_security_policy() -> str:
     return "; ".join(
         [
             "default-src 'self'",
-            f"script-src 'self' 'unsafe-eval' blob: {g} https://accounts.google.com/gsi/client",
+            f"script-src 'self' 'unsafe-eval' blob: {g} https://accounts.google.com/gsi/client https://checkout.razorpay.com",
             f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
-            f"img-src 'self' data: blob: {g} https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org",
+            f"img-src 'self' data: blob: {g} https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://*.razorpay.com",
             "font-src 'self' https://fonts.gstatic.com data:",
-            f"connect-src 'self' data: blob: {g} https://accounts.google.com/gsi/",
-            "frame-src *.google.com https://accounts.google.com/gsi/",
+            f"connect-src 'self' data: blob: {g} https://accounts.google.com/gsi/ https://*.razorpay.com",
+            "frame-src *.google.com https://accounts.google.com/gsi/ https://api.razorpay.com https://checkout.razorpay.com",
             "worker-src 'self' blob:",
             "manifest-src 'self'",
             "base-uri 'self'",
@@ -134,6 +134,7 @@ class WebMiddleware(BaseHTTPMiddleware):
             if (
                 request.method in self.STATE_CHANGING
                 and path.startswith("/api/")
+                and path != "/api/billing/webhook"  # server-to-server, authenticated by its HMAC signature
                 and request.headers.get("x-requested-with") != "breatheasy"
             ):
                 response: Response = JSONResponse({"detail": "Missing X-Requested-With header."}, status_code=403)

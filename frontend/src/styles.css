@@ -1846,3 +1846,56 @@ a {
 .is-mobile .stage .legend-ticks span:nth-child(6) {
   display: none;
 }
+
+/* ============ plan card ============ */
+.plan-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.plan-card.is-plus {
+  border-color: var(--action);
+  background: var(--action-soft);
+}
+.plan-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plan-top span {
+  font-size: 13px;
+  color: var(--fog);
+}
+.plan-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mist);
+  overflow: hidden;
+}
+.plan-meter i {
+  display: block;
+  height: 100%;
+  background: var(--action);
+  border-radius: 3px;
+}
+.plan-line {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--fog);
+}
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.plan-actions .fine {
+  flex-basis: 100%;
+  margin: 0;
+}

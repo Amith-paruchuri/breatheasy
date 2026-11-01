@@ -9,21 +9,23 @@ import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import __version__
-from .auth import TokenVerifier
-from .config import get_settings
-from .db import Database
-from .environment import EnvironmentLayer
+from .auth import TokenVerifier, get_db, optional_user
 from .budget import SpendGuard
+from .config import get_settings
+from .db import Database, User
+from .environment import EnvironmentLayer
 from .migrate import run_migrations
+from .plans import consume, entitlement
 from .models import PlaceDetails, PlaceSuggestion, RouteRequest, RouteResponse, TravelMode, Usage
 from .providers import ProviderError, build_providers
-from .routers import account
+from .routers import account, billing
 from .services.airquality import AQCache, AQService
 from .services.planner import plan_routes
 from .web import RateLimiter, WebMiddleware, client_ip, mount_frontend, setup_logging
@@ -169,6 +171,15 @@ async def config(request: Request):
         "map_id": s.google_map_id,
         "google_oauth_client_id": s.google_oauth_client_id,
         "accounts_enabled": s.accounts_enabled,
+        "plans": {
+            "enabled": s.plans_enabled,
+            "payments": s.payments_enabled,
+            "free_street_searches": s.free_street_searches,
+            "plus_street_searches": s.plus_street_searches,
+            "monthly_inr": s.plus_price_monthly_inr if s.razorpay_plan_monthly else None,
+            "yearly_inr": s.plus_price_yearly_inr if s.razorpay_plan_yearly else None,
+            "razorpay_key_id": s.razorpay_key_id if s.payments_enabled else "",
+        },
         "operator_name": s.operator_name,
         "contact_email": s.public_contact_email,
         "version": __version__,
@@ -200,24 +211,41 @@ async def place_details(request: Request, place_id: str, session: str | None = Q
 
 
 @app.post("/api/routes", response_model=RouteResponse)
-async def routes(request: Request, body: RouteRequest):
+async def routes(
+    request: Request,
+    body: RouteRequest,
+    user: User | None = Depends(optional_user),
+    db: AsyncSession = Depends(get_db),
+):
     if not request.app.state.route_limiter.check(client_ip(request)):
         raise HTTPException(429, "Too many route requests. Try again in a minute.")
+    s = request.app.state.settings
     guard = request.app.state.spend
-    force_open = await guard.over_budget()
+    ent = entitlement(user, s)
+    over = await guard.over_budget()
     resp = await plan_routes(
         body,
         request.app.state.providers,
         request.app.state.aq,
-        request.app.state.settings,
+        s,
         request.app.state.env,
-        force_open=force_open,
+        force_open=over or not ent.street,
+        open_reason=None if over else ent.reason,
     )
     await guard.record(resp.usage, body.mode)
+    if ent.status is not None:
+        # Street-level = this search really used the paid provider (not open data).
+        street = ent.street and not over and resp.usage.aq_source != "open"
+        ent.status.street_level = street
+        if street and user is not None:
+            consume(user, ent.status)
+            await db.commit()
+        resp.plan = ent.status
     return resp
 
 
 app.include_router(account.router)
+app.include_router(billing.router)
 
 # Must be last: catch-all route for the single-page app.
 mount_frontend(app, settings_at_import.static_dir)

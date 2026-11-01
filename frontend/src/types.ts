@@ -59,6 +59,7 @@ export interface RouteOut {
 }
 
 export interface RouteResponse {
+  plan?: PlanStatus | null;
   routes: RouteOut[];
   recommended_id: string;
   fastest_id: string;
@@ -120,7 +121,26 @@ export interface AppConfig {
   map_id: string;
   google_oauth_client_id: string;
   accounts_enabled: boolean;
+  plans?: PlansConfig;
   version: string;
+}
+
+export interface PlansConfig {
+  enabled: boolean;
+  payments: boolean;
+  free_street_searches: number;
+  plus_street_searches: number;
+  monthly_inr: number | null;
+  yearly_inr: number | null;
+  razorpay_key_id: string;
+}
+
+export interface PlanStatus {
+  plan: "anonymous" | "free" | "plus";
+  street_level: boolean;
+  used: number;
+  limit: number;
+  plus_until: string | null;
 }
 
 export interface Me {

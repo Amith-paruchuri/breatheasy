@@ -36,8 +36,8 @@ gcloud run deploy "$SERVICE" \
   --region="$REGION" \
   --service-account="$SA_EMAIL" \
   --add-cloudsql-instances="$CONN_NAME" \
-  --set-secrets="DATABASE_URL=breatheasy-database-url:latest,SESSION_SECRET=breatheasy-session-secret:latest,GOOGLE_MAPS_SERVER_KEY=breatheasy-maps-server-key:latest" \
-  --set-env-vars="^|^${ENV_VARS//,/|}|USER_AGENT=$USER_AGENT" \
+  --update-secrets="DATABASE_URL=breatheasy-database-url:latest,SESSION_SECRET=breatheasy-session-secret:latest,GOOGLE_MAPS_SERVER_KEY=breatheasy-maps-server-key:latest" \
+  --update-env-vars="^|^${ENV_VARS//,/|}|USER_AGENT=$USER_AGENT" \
   --allow-unauthenticated \
   --cpu=1 --memory=1Gi --concurrency=40 --timeout=60 \
   --min-instances="${MIN_INSTANCES:-1}" --max-instances="${MAX_INSTANCES:-4}" \

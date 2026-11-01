@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import clear_session, get_db, issue_session, optional_user, require_user
 from ..db import SavedPlace, Trip, User, utcnow
-from ..models import Preference, TravelMode
+from ..models import PlanStatus, Preference, TravelMode
+from ..plans import entitlement
 
 router = APIRouter(prefix="/api")
 
@@ -33,6 +34,7 @@ class MeOut(BaseModel):
 class MeResponse(BaseModel):
     user: MeOut | None
     accounts_enabled: bool
+    plan: PlanStatus | None = None  # present when plans are enabled and someone is signed in
 
 
 class PlaceIn(BaseModel):
@@ -160,7 +162,11 @@ async def sign_out_everywhere(
 
 @router.get("/me", response_model=MeResponse)
 async def me(request: Request, user: User | None = Depends(optional_user)):
-    return MeResponse(user=_me(user) if user else None, accounts_enabled=request.app.state.settings.accounts_enabled)
+    s = request.app.state.settings
+    plan = entitlement(user, s).status if (user and s.plans_enabled) else None
+    if plan is not None:
+        plan.street_level = plan.used < plan.limit
+    return MeResponse(user=_me(user) if user else None, accounts_enabled=s.accounts_enabled, plan=plan)
 
 
 @router.delete("/me", status_code=204)

@@ -146,6 +146,24 @@ class Settings(BaseSettings):
     # 0 turns the cap off. 10 USD/day caps the Google bill at roughly 300 USD/month.
     google_daily_budget_usd: float = 10.0
 
+    # --- Plans and payments ----------------------------------------------
+    # Off by default: everyone gets street-level (Google) data, as before. On: signed-out
+    # visitors get open data, signed-in Free users get FREE_STREET_SEARCHES a month and
+    # Plus subscribers PLUS_STREET_SEARCHES (fair use); past that, open data.
+    plans_enabled: bool = False
+    free_street_searches: int = 5
+    plus_street_searches: int = 100
+    plus_price_monthly_inr: int = 149
+    plus_price_yearly_inr: int = 1199
+    # Razorpay (payments stay off until all of these are set). Create two plans in the
+    # Razorpay dashboard (monthly and yearly) and paste their IDs here.
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+    razorpay_plan_monthly: str = ""
+    razorpay_plan_yearly: str = ""
+    razorpay_api_url: str = "https://api.razorpay.com/v1"
+
     # --- Safety rails ----------------------------------------------------
     route_requests_per_minute: int = 20  # per client IP, protects your billing account
     place_requests_per_minute: int = 120  # autocomplete is called while typing
@@ -179,6 +197,16 @@ class Settings(BaseSettings):
     @property
     def accounts_enabled(self) -> bool:
         return bool(self.google_oauth_client_id)
+
+    @property
+    def payments_enabled(self) -> bool:
+        return bool(
+            self.plans_enabled
+            and self.razorpay_key_id
+            and self.razorpay_key_secret
+            and self.razorpay_webhook_secret
+            and (self.razorpay_plan_monthly or self.razorpay_plan_yearly)
+        )
 
     @property
     def public_contact_email(self) -> str:

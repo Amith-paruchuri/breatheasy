@@ -132,6 +132,7 @@ async def plan_routes(
     s: Settings,
     env: EnvironmentLayer | None = None,
     force_open: bool = False,
+    open_reason: str | None = None,
 ) -> RouteResponse:
     usage = Usage()
     if force_open and hasattr(providers.routes, "secondary"):
@@ -290,7 +291,8 @@ async def plan_routes(
 
     if force_open:
         warnings.append(
-            "Breatheasy is very busy today, so this search uses free open data "
+            open_reason
+            or "Breatheasy is very busy today, so this search uses free open data "
             "(coarser air quality; route differences are less reliable)."
         )
     elif usage.fallback:
