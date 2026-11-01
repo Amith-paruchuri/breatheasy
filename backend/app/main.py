@@ -19,6 +19,7 @@ from .auth import TokenVerifier
 from .config import get_settings
 from .db import Database
 from .environment import EnvironmentLayer
+from .budget import SpendGuard
 from .migrate import run_migrations
 from .models import PlaceDetails, PlaceSuggestion, RouteRequest, RouteResponse, TravelMode, Usage
 from .providers import ProviderError, build_providers
@@ -68,6 +69,7 @@ async def lifespan(app: FastAPI):
     env_path = s.env_layer_path or str(Path(__file__).parent / "data" / "environment.json.gz")
     app.state.env = await asyncio.to_thread(EnvironmentLayer.load, env_path)
     app.state.aq = AQService(app.state.providers.air, s, AQCache(s.aq_cache_ttl_s))
+    app.state.spend = SpendGuard(app.state.db.engine, s)
     app.state.route_limiter = RateLimiter(s.route_requests_per_minute)
     app.state.place_limiter = RateLimiter(s.place_requests_per_minute)
     purge = asyncio.create_task(_purge_loop(app))
@@ -167,6 +169,8 @@ async def config(request: Request):
         "map_id": s.google_map_id,
         "google_oauth_client_id": s.google_oauth_client_id,
         "accounts_enabled": s.accounts_enabled,
+        "operator_name": s.operator_name,
+        "contact_email": s.public_contact_email,
         "version": __version__,
     }
 
@@ -189,16 +193,28 @@ async def place_details(request: Request, place_id: str, session: str | None = Q
         raise HTTPException(400, "Invalid place.")
     if not request.app.state.place_limiter.check(client_ip(request)):
         raise HTTPException(429, "Too many searches. Slow down a little.")
-    return await request.app.state.providers.places.details(place_id, session, Usage())
+    usage = Usage()
+    out = await request.app.state.providers.places.details(place_id, session, usage)
+    await request.app.state.spend.record(usage, None, search=False)
+    return out
 
 
 @app.post("/api/routes", response_model=RouteResponse)
 async def routes(request: Request, body: RouteRequest):
     if not request.app.state.route_limiter.check(client_ip(request)):
         raise HTTPException(429, "Too many route requests. Try again in a minute.")
-    return await plan_routes(
-        body, request.app.state.providers, request.app.state.aq, request.app.state.settings, request.app.state.env
+    guard = request.app.state.spend
+    force_open = await guard.over_budget()
+    resp = await plan_routes(
+        body,
+        request.app.state.providers,
+        request.app.state.aq,
+        request.app.state.settings,
+        request.app.state.env,
+        force_open=force_open,
     )
+    await guard.record(resp.usage, body.mode)
+    return resp
 
 
 app.include_router(account.router)

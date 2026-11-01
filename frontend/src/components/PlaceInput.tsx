@@ -54,7 +54,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
       } catch (e) {
         if ((e as Error).name !== "AbortError") setErr((e as Error).message);
       }
-    }, 220);
+    }, 300);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -71,7 +71,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
   async function pick(s: Suggestion) {
     setBusy(true);
     try {
-      const p = await placeDetails(s.place_id, session.current);
+      const p = await placeDetails(s.place_id, session.current, s.primary);
       choose(p);
       setErr(null);
     } catch (e) {

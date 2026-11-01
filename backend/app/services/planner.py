@@ -25,6 +25,7 @@ from ..models import (
 from ..aqi import category as aqi_category
 from ..aqi import compute_aqi
 from ..environment import EnvironmentLayer, highlights
+from ..budget import google_cost
 from ..models import Highlight, Preference, TravelMode
 from ..providers import Providers
 from ..providers.base import ProviderError
@@ -79,18 +80,6 @@ def _ll(p) -> LatLng:
     return LatLng(lat=round(p[0], 6), lng=round(p[1], 6))
 
 
-def estimate_cost(usage: Usage, s: Settings) -> float | None:
-    parts = [
-        (usage.routes_calls, s.price_routes_per_1000_usd),
-        (usage.aq_current_calls + usage.aq_forecast_calls, s.price_aq_per_1000_usd),
-        (usage.places_autocomplete_calls, s.price_places_autocomplete_per_1000_usd),
-        (usage.places_details_calls, s.price_places_details_per_1000_usd),
-    ]
-    if any(n and price is None for n, price in parts):
-        return None
-    return round(sum(n * (price or 0) / 1000 for n, price in parts), 5)
-
-
 MODE_WORDS = {
     TravelMode.WALK: "walking",
     TravelMode.BICYCLE: "cycling",
@@ -137,9 +126,16 @@ def _adjusted(r, factor: float):
 
 
 async def plan_routes(
-    req: RouteRequest, providers: Providers, aq: AQService, s: Settings, env: EnvironmentLayer | None = None
+    req: RouteRequest,
+    providers: Providers,
+    aq: AQService,
+    s: Settings,
+    env: EnvironmentLayer | None = None,
+    force_open: bool = False,
 ) -> RouteResponse:
     usage = Usage()
+    if force_open and hasattr(providers.routes, "secondary"):
+        usage.routes_source = "open"  # daily Google budget reached: free open data only
     warnings: list[str] = []
     now = datetime.now(timezone.utc)
     departure = req.departure_time or now
@@ -174,8 +170,9 @@ async def plan_routes(
     queries = [
         (seg.mid[0], seg.mid[1], departure + timedelta(seconds=seg.mid_s)) for segs in seg_lists for seg in segs
     ]
-    scale = aq.choose_scale([(q[0], q[1]) for q in queries])
-    readings_flat = await aq.lookup(queries, now, usage, scale)
+    vehicle = req.mode in (TravelMode.DRIVE, TravelMode.TWO_WHEELER)
+    scale = aq.choose_scale([(q[0], q[1]) for q in queries], s.aq_vehicle_scale if vehicle else 1)
+    readings_flat = await aq.lookup(queries, now, usage, scale, force_open=force_open)
 
     # Street context is CPU work: do it off the event loop so other requests keep flowing.
     env_ctx = (
@@ -291,12 +288,17 @@ async def plan_routes(
     if any(r.coverage < 0.8 for r in routes_out):
         warnings.append("Air-quality data was missing for part of at least one route; gaps were filled with that route's average.")
 
-    if usage.fallback:
+    if force_open:
+        warnings.append(
+            "Breatheasy is very busy today, so this search uses free open data "
+            "(coarser air quality; route differences are less reliable)."
+        )
+    elif usage.fallback:
         warnings.append(
             "Google data was unavailable for this request, so it uses open data instead "
             "(coarser air quality; route differences are less reliable)."
         )
-    usage.estimated_cost_usd = 0.0 if providers.free else estimate_cost(usage, s)
+    usage.estimated_cost_usd = 0.0 if providers.free else round(google_cost(usage, s, req.mode), 5)
     resp = RouteResponse(
         routes=routes_out,
         recommended_id=rec_id,

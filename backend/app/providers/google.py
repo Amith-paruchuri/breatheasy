@@ -290,7 +290,9 @@ class GooglePlaces:
     async def details(self, place_id, session, usage: Usage):
         headers = {
             "X-Goog-Api-Key": self.c.key,
-            "X-Goog-FieldMask": "id,displayName,formattedAddress,location",
+            # Essentials fields only: displayName would bill the pricier Place Details Pro SKU.
+            # The app labels the place with the suggestion text the person tapped.
+            "X-Goog-FieldMask": "id,formattedAddress,location",
         }
         params = {"sessionToken": session} if session else None
         usage.places_details_calls += 1
@@ -306,7 +308,7 @@ class GooglePlaces:
         loc = d.get("location", {})
         return PlaceDetails(
             place_id=place_id,
-            name=d.get("displayName", {}).get("text", ""),
+            name=d.get("displayName", {}).get("text", "") or d.get("formattedAddress", "").split(",")[0],
             address=d.get("formattedAddress", ""),
             location=LatLng(lat=loc.get("latitude", 0.0), lng=loc.get("longitude", 0.0)),
         )

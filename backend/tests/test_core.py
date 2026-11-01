@@ -131,7 +131,7 @@ async def test_aq_dedupes_cells_and_splits_current_vs_forecast():
     q = [
         (28.5672, 77.2100, now),  # same cell twice, current hour
         (28.5673, 77.2101, now + timedelta(minutes=5)),
-        (28.6000, 77.2500, now + timedelta(hours=2)),  # later hour -> forecast
+        (28.6000, 77.2500, now + timedelta(hours=3)),  # later hour -> forecast
     ]
     usage = Usage()
     out = await svc.lookup(q, now, usage)

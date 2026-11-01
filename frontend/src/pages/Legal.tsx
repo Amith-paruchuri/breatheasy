@@ -1,11 +1,24 @@
 /**
- * Privacy policy and terms. DRAFTS: fill in OPERATOR and CONTACT, check every
- * statement still matches how the app is configured, and have them reviewed
- * before launch. Google's OAuth consent screen requires a public privacy policy URL.
+ * Privacy policy and terms. The operator name and contact address come from the
+ * server config (OPERATOR_NAME, CONTACT_EMAIL). Check every statement still matches
+ * how the app is configured, and have them reviewed before a commercial launch.
+ * Google's OAuth consent screen requires a public privacy policy URL.
  */
-export const OPERATOR = "[Operator name]";
-export const CONTACT = "[contact email]";
-export const UPDATED = "22 October 2026";
+import { useEffect, useState } from "react";
+
+export const UPDATED = "2 November 2026";
+
+function useOperator() {
+  const [op, setOp] = useState({ name: "the Breatheasy team", contact: "the contact address on this site" });
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((c) => setOp({ name: c.operator_name || op.name, contact: c.contact_email || op.contact }))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return op;
+}
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -21,6 +34,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export function PrivacyPage() {
+  const { name: OPERATOR, contact: CONTACT } = useOperator();
   return (
     <Shell title="Privacy policy">
       <p>
@@ -109,6 +123,7 @@ export function PrivacyPage() {
 }
 
 export function TermsPage() {
+  const { name: OPERATOR, contact: CONTACT } = useOperator();
   return (
     <Shell title="Terms of use">
       <p>

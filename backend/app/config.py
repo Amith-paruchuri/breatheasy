@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from typing import Literal
 
@@ -32,6 +33,11 @@ class Settings(BaseSettings):
     trip_retention_days: int = 365  # older trips are deleted automatically
     max_saved_places: int = 50
     max_trips_per_day: int = 200
+
+    # --- Operator (shown on the privacy policy and terms) ----------------
+    operator_name: str = "Dr Amith Paruchuri"
+    # Contact for privacy/grievance requests. Blank: taken from USER_AGENT's email.
+    contact_email: str = ""
 
     # --- Public browser config (served to the frontend at runtime) -------
     # Restrict this key to Maps JavaScript API + your domain (HTTP referrers).
@@ -76,7 +82,7 @@ class Settings(BaseSettings):
     forecast_horizon_h: int = 96
     # Parts of the trip reached within this many minutes use current conditions
     # (one cheap lookup) rather than the hourly forecast.
-    current_window_min: int = 60
+    current_window_min: int = 120
 
     # --- Candidate generation --------------------------------------------
     max_candidates: int = 8
@@ -89,7 +95,10 @@ class Settings(BaseSettings):
 
     # --- Speed and cost guards (every search must answer in a few seconds) -
     max_segments_per_route: int = 40  # long routes are sampled more coarsely
-    max_aq_cells: int = 90  # distinct air-quality lookups per search; grid coarsens beyond this
+    max_aq_cells: int = 75  # distinct air-quality lookups per search; grid coarsens beyond this
+    # Cars and two-wheelers cross a 500 m cell in well under a minute, so they read the
+    # air on a ~1 km grid (scale 2): about half the Air Quality calls, same ranking.
+    aq_vehicle_scale: int = 2
     aq_deadline_s: float = 10.0  # Google AQ slower than this -> open data for this search
     # Straight-line trip limits per mode; beyond these the app suggests another mode.
     max_trip_km_walk: float = 15.0
@@ -120,11 +129,22 @@ class Settings(BaseSettings):
     balanced_pct_per_min: float = 1.5  # balanced mode: 1 extra minute must buy >=1.5% less exposure
     pm25_reference_ugm3: float = 60.0  # India NAAQS 24-h PM2.5 level, shown for reference only
 
-    # --- Cost tracking (fill from the current Google Maps Platform price list)
-    price_routes_per_1000_usd: float | None = None
-    price_aq_per_1000_usd: float | None = None
-    price_places_autocomplete_per_1000_usd: float | None = None
-    price_places_details_per_1000_usd: float | None = None
+    # --- Cost tracking -----------------------------------------------------
+    # Google Maps Platform India price list, USD per 1,000 billable calls, for usage
+    # above the free monthly allowance and below 5 million calls (checked Nov 2026:
+    # developers.google.com/maps/billing-and-pricing/pricing-india). Used for the
+    # cost shown per search and for the daily spending cap below. Update if Google
+    # changes its prices. Free allowances are ignored here, so estimates run high.
+    price_routes_per_1000_usd: float | None = 1.50  # Compute Routes Essentials (walk, cycle)
+    price_routes_pro_per_1000_usd: float = 3.00  # TRAFFIC_AWARE (car)
+    price_routes_enterprise_per_1000_usd: float = 4.50  # two-wheeler routing
+    price_aq_per_1000_usd: float | None = 0.50
+    price_places_autocomplete_per_1000_usd: float | None = 0.85
+    price_places_details_per_1000_usd: float | None = 1.50  # Place Details Essentials
+    # Spending cap: once today's estimated Google spend (India time) passes this, the
+    # app answers from free open data until midnight instead of calling Google.
+    # 0 turns the cap off. 10 USD/day caps the Google bill at roughly 300 USD/month.
+    google_daily_budget_usd: float = 10.0
 
     # --- Safety rails ----------------------------------------------------
     route_requests_per_minute: int = 20  # per client IP, protects your billing account
@@ -159,6 +179,13 @@ class Settings(BaseSettings):
     @property
     def accounts_enabled(self) -> bool:
         return bool(self.google_oauth_client_id)
+
+    @property
+    def public_contact_email(self) -> str:
+        if self.contact_email:
+            return self.contact_email
+        m = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", self.user_agent)
+        return m.group(0) if m else ""
 
     def production_problems(self) -> list[str]:
         """Settings that make a production deploy unsafe. Startup refuses to run with any."""

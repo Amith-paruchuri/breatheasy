@@ -83,11 +83,13 @@ export const getConfig = () => req<AppConfig>("/api/config");
 export const autocomplete = (q: string, session: string, signal?: AbortSignal) =>
   req<Suggestion[]>(`/api/places/autocomplete?q=${encodeURIComponent(q)}&session=${session}`, { signal });
 
-export const placeDetails = async (id: string, session: string): Promise<Place> => {
+export const placeDetails = async (id: string, session: string, label?: string): Promise<Place> => {
   const d = await req<{ name: string; location: LatLng }>(
     `/api/places/${encodeURIComponent(id)}?session=${session}`,
   );
-  return { label: d.name, location: d.location };
+  // Prefer the suggestion text the person tapped (the server asks Google only for
+  // the cheaper location fields).
+  return { label: label || d.name, location: d.location };
 };
 
 export interface RouteQuery {

@@ -59,16 +59,21 @@ class AQService:
         k = self.s.aq_cell_deg * scale
         return ((cell[0] + 0.5) * k, (cell[1] + 0.5) * k)
 
-    def choose_scale(self, points: list[tuple[float, float]]) -> int:
+    def choose_scale(self, points: list[tuple[float, float]], min_scale: int = 1) -> int:
         """Smallest grid scale (1, 2, 4, ...) that keeps lookups under MAX_AQ_CELLS.
         Short city trips stay at the native ~500 m grid; very long ones coarsen."""
-        scale = 1
+        scale = max(1, min_scale)
         while scale < 64 and len({self.cell_of(la, ln, scale) for la, ln in points}) > self.s.max_aq_cells:
             scale *= 2
         return scale
 
     async def lookup(
-        self, queries: list[tuple[float, float, datetime]], now: datetime, usage: Usage, scale: int = 1
+        self,
+        queries: list[tuple[float, float, datetime]],
+        now: datetime,
+        usage: Usage,
+        scale: int = 1,
+        force_open: bool = False,
     ) -> list[AQReading | None]:
         """queries: (lat, lng, expected arrival time). Returns readings in the same order.
 
@@ -88,7 +93,7 @@ class AQService:
                     504,
                     code="slow",
                 ) from None
-        if p.breaker.ok():
+        if p.breaker.ok() and not force_open:
             try:
                 out = await asyncio.wait_for(self._lookup(p.primary, "google", queries, now, usage, scale), deadline)
                 usage.aq_source = "google"

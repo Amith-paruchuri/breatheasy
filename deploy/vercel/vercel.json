@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://breatheasy-2lqwczvwyq-el.a.run.app/:path*",
+      "permanent": false
+    }
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ./"
+}
