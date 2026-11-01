@@ -100,8 +100,8 @@ def test_webhook_renews_and_rejects_forgeries(client, monkeypatch):
     _subscribe(client, monkeypatch, "sub_w")
     end = int(time.time()) + 30 * 86400
     body = json.dumps({"event": "subscription.charged", "payload": {"subscription": {"entity": {"id": "sub_w", "current_end": end}}}}).encode()
-    # no CSRF header needed (server to server), but the signature is
-    raw = TestClient(app)
+    # authenticated by its signature (same client: a second one would use another event loop)
+    raw = client
     assert raw.post("/api/billing/webhook", content=body, headers={"x-razorpay-signature": "nope"}).status_code == 400
     sig = hmac.new(HOOK.encode(), body, hashlib.sha256).hexdigest()
     assert raw.post("/api/billing/webhook", content=body, headers={"x-razorpay-signature": sig}).status_code == 200
