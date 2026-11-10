@@ -1,8 +1,12 @@
 # Breatheasy
 
-Pollution-aware navigation for Delhi-NCR. For each trip it compares candidate routes, estimates PM2.5 exposure on each, and recommends the one with less exposure within the extra travel time you accept. Signed-in users can save places and keep a trip log showing the exposure they avoided. It installs on phones as an app.
+**Cleaner-air routes for Delhi-NCR.** Air pollution isn't the same on every street: a busy arterial road can carry far more fine dust than a lane beside a park a few hundred metres away, but navigation apps only optimise for time. Breatheasy compares up to eight candidate routes for a trip (Google's own, side streets, and routes through nearby parks and lakes), estimates the PM2.5 and AQI along each one, and recommends the cleanest within the extra time you accept. It works for walking, cycling, two-wheelers and cars, explains why a route is cleaner ("Passes Lodhi Garden, about 8 min beside greenery"), and hands the exact route to Google Maps for navigation.
 
-**Stack:** React + TypeScript (Vite, installable PWA) · FastAPI · SQLAlchemy + Alembic · Postgres (Cloud SQL) · Google Routes, Air Quality, Places, Maps JS and Identity · one container on Google Cloud Run.
+**Live app:** https://breatheasy-2lqwczvwyq-el.a.run.app (installable on phones as an app)
+
+**Stack:** React + TypeScript (Vite, installable PWA) · FastAPI · SQLAlchemy + Alembic · Postgres (Cloud SQL) · Google Routes, Air Quality, Places, Maps JS and Identity · OpenStreetMap street context · one container on Google Cloud Run, deployed automatically from this repo by Cloud Build.
+
+**Licence:** MIT (see [LICENSE](LICENSE)). Map data © OpenStreetMap contributors (ODbL).
 
 ## Go live on Google Cloud
 
@@ -10,8 +14,10 @@ You need a Google Cloud project with billing on. Everything else is scripted; op
 
 ```bash
 ./deploy/cloudrun/setup.sh    # once: APIs, database, API keys, secrets, sign-in client
-./deploy/cloudrun/deploy.sh   # every release: build, deploy, lock the browser key to your URL
+./deploy/cloudrun/deploy.sh   # first release: build, deploy, lock the browser key to your URL
 ```
+
+After that, every push to `main` deploys automatically through the `cloudbuild.yaml` Cloud Build trigger (tests, image, rollout).
 
 `setup.sh` creates restricted API keys itself and stores secrets in Secret Manager, so **API keys never need to be pasted into chat, code or config files**. If you already have keys, it asks for them with hidden input instead. One step is manual: creating the OAuth client for Google sign-in (the script prints the exact console links).
 
@@ -41,7 +47,7 @@ Locally it defaults to **open data** (no keys): OpenStreetMap routing, Open-Mete
 
 Production-like local run with Postgres: `cp backend/.env.example .env.compose && docker compose up --build` → http://localhost:8080
 
-Tests: `cd backend && pip install -r requirements-dev.txt && pytest` (49 tests; set `TEST_DATABASE_URL` to also run them on Postgres). CI runs both plus the frontend build and the Docker image on every push.
+Tests: `cd backend && pip install -r requirements-dev.txt && pytest` (87 tests; set `TEST_DATABASE_URL` to also run them on Postgres). CI runs both plus the frontend build and the Docker image on every push.
 
 ## How Breatheasy ranks routes
 
