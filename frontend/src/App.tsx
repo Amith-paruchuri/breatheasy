@@ -601,7 +601,8 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         {result.data.oldest_observation && ` Current conditions as of ${fmtTime(result.data.oldest_observation)}.`}
         {result.data.uses_forecast && " Later parts of the trip use the hourly forecast."}
       </p>
-      <p>Exposure is PM2.5 multiplied by the minutes you spend in it: a way to compare routes, not a measure of what you breathe, and not medical advice.</p>
+      <p>Exposure is PM2.5 multiplied by the minutes you spend in it: a way to compare routes, not medical advice.</p>
+      <p>Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.</p>
       <details>
         <summary>Data sources and cost</summary>
         <p>

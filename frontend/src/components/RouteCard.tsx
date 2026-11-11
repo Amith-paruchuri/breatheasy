@@ -264,12 +264,7 @@ export function RouteCard({
             <Icon name="navigate" size={18} />
             Start in Google Maps
           </a>
-          {details && (
-            <p className="rcard-hint">
-              Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.
-              {navigateHint ? ` ${navigateHint}` : ""}
-            </p>
-          )}
+          {details && navigateHint && <p className="rcard-hint">{navigateHint}</p>}
         </div>
       )}
       {compact && (
