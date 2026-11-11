@@ -144,16 +144,16 @@ class EnvironmentLayer:
     def empty(self) -> bool:
         return not self.areas and not self.roads
 
+    def at(self, p: Point) -> "EnvironmentLayer":
+        return self
+
+    @property
+    def cities(self) -> list[str]:
+        return [] if self.empty else ["Delhi-NCR"]
+
     # ---------- loading ----------
-    @classmethod
-    def load(cls, path: str | Path) -> "EnvironmentLayer":
-        p = Path(path)
-        if not p.is_file():
-            log.info("environment layer not found at %s; street-level context is off", p)
-            return cls([], [])
-        opener = gzip.open if p.suffix == ".gz" else open
-        with opener(p, "rt", encoding="utf-8") as f:
-            data = json.load(f)
+    @staticmethod
+    def _parse(data: dict) -> tuple[list[Area], list[Road]]:
         areas = []
         for i, a in enumerate(data.get("areas", [])):
             rings = [[(pt[0], pt[1]) for pt in ring] for ring in a["rings"] if len(ring) >= 3]
@@ -168,8 +168,29 @@ class EnvironmentLayer:
             for i, r in enumerate(data.get("roads", []))
             if len(r.get("pts", [])) >= 2
         ]
+        return areas, roads
+
+    @classmethod
+    def load(cls, path: str | Path):
+        """One city (version 1 file) or several (version 2: {"cities": [...]})."""
+        p = Path(path)
+        if not p.is_file():
+            log.info("environment layer not found at %s; street-level context is off", p)
+            return cls([], [])
+        opener = gzip.open if p.suffix == ".gz" else open
+        with opener(p, "rt", encoding="utf-8") as f:
+            data = json.load(f)
+        source = data.get("source", "© OpenStreetMap contributors")
+        if "cities" in data:
+            layers = []
+            for c in data["cities"]:
+                areas, roads = cls._parse(c)
+                layers.append((c.get("name", ""), tuple(c["bbox"]), cls(areas, roads, source)))
+                log.info("environment layer %s: %d areas, %d roads", c.get("name"), len(areas), len(roads))
+            return MultiCityLayer(layers, source)
+        areas, roads = cls._parse(data)
         log.info("environment layer loaded: %d areas, %d roads", len(areas), len(roads))
-        return cls(areas, roads, data.get("source", "© OpenStreetMap contributors"))
+        return cls(areas, roads, source)
 
     # ---------- point queries ----------
     def _cell_keys(self, p: Point):
@@ -395,3 +416,27 @@ def highlights(rc: RouteContext, mode: str) -> list[dict]:
     if busy_share >= 0.5 and mode in ("WALK", "BICYCLE"):
         out.sort(key=lambda h: h["kind"] != "road")  # warn first when most of the walk is on busy roads
     return out
+
+
+class MultiCityLayer:
+    """Several city layers, each with its own local projection. A trip uses the layer
+    of the city its origin is in; elsewhere street context is simply off."""
+
+    def __init__(self, layers: list[tuple[str, tuple[float, float, float, float], EnvironmentLayer]], source: str = ""):
+        self.layers = layers
+        self.source = source
+        self._none = EnvironmentLayer([], [], source)
+
+    @property
+    def empty(self) -> bool:
+        return all(layer.empty for _, _, layer in self.layers)
+
+    @property
+    def cities(self) -> list[str]:
+        return [name for name, _, layer in self.layers if not layer.empty]
+
+    def at(self, p: Point) -> EnvironmentLayer:
+        for _, (s, w, n, e), layer in self.layers:
+            if s <= p[0] <= n and w <= p[1] <= e:
+                return layer
+        return self._none

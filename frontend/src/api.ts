@@ -127,6 +127,7 @@ export interface AgentRequest {
 export interface AgentResponse {
   verdict: string;
   plan: RouteResponse | null;
+  mode?: import("./types").TravelMode | null;
 }
 
 export async function runAgent(q: AgentRequest, signal?: AbortSignal, timeoutMs = 60000): Promise<AgentResponse> {

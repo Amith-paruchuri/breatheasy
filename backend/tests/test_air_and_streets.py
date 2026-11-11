@@ -122,7 +122,7 @@ def test_plan_has_aqi_highlights_and_a_green_corridor(env):
     p = build_providers(s)
     aq = AQService(p.air, s, AQCache(60))
     req = RouteRequest(origin=LatLng(lat=AIIMS[0], lng=AIIMS[1]), destination=LatLng(lat=CP[0], lng=CP[1]),
-                       mode=TravelMode.WALK)
+                       mode=TravelMode.WALK, preference=Preference.CLEANEST_AIR)
     resp = asyncio.run(plan_routes(req, p, aq, s, env))
     assert resp.preference == Preference.CLEANEST_AIR and resp.max_extra_minutes == s.cleanest_air_default_extra_minutes
     assert resp.comparison.basis == "pm25"
@@ -202,9 +202,9 @@ def test_build_script_end_to_end_with_fake_overpass(tmp_path, monkeypatch):
     monkeypatch.setattr(b, "fetch", fake_fetch)
     monkeypatch.setattr(b.time, "sleep", lambda s: None)
     out = tmp_path / "env.json.gz"
-    monkeypatch.setattr(sys, "argv", ["x", "--tiles", "1", "--out", str(out)])
+    monkeypatch.setattr(sys, "argv", ["x", "--tiles", "1", "--cities", "Delhi-NCR", "--out", str(out)])
     b.main()
-    env = EnvironmentLayer.load(out)
+    env = EnvironmentLayer.load(out).at((28.6, 77.2))
     names = sorted(a.name for a in env.areas)
     assert names == ["Lodhi Garden", "Test Lake"] and len(env.roads) == 1
     assert env.near((28.593, 77.218))[0][0].name == "Lodhi Garden"

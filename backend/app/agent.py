@@ -221,7 +221,7 @@ async def run_agent(
 
     best_plan.recommended_id = best_route.id
     best_plan.usage = usage
-    return AgentResponse(verdict=verdict, plan=best_plan)
+    return AgentResponse(verdict=verdict, plan=best_plan, mode=parsed["mode"])
 
 
 def _merge_usage(total: Usage, extra: Usage):

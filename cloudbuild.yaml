@@ -12,7 +12,7 @@ options:
   logging: CLOUD_LOGGING_ONLY
   dynamicSubstitutions: true
 
-timeout: 2400s
+timeout: 3600s
 
 steps:
   - id: tests
@@ -60,6 +60,9 @@ steps:
         fi
         true
 
+  # Adds any city still missing from the layer (Delhi-NCR, Mumbai, Kolkata, Bengaluru,
+  # Hyderabad); cities already built are kept, so normally this takes seconds. Saved
+  # after every city, so a slow map server only delays the rest to the next deploy.
   - id: map-layer-finish
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: bash
@@ -67,13 +70,15 @@ steps:
       - -c
       - |
         OUT=backend/app/data/environment.json.gz
-        [ -f /workspace/.map_saved ] && exit 0
-        if [ ! -f $$OUT ] && ! timeout 1200 python3 backend/scripts/build_environment.py; then
-          rm -f $$OUT
-          echo "WARNING: map layer unavailable; deploying without park and road context"
-          exit 0
+        BEFORE=$$(md5sum $$OUT 2>/dev/null | cut -c1-32)
+        timeout 1800 python3 backend/scripts/build_environment.py \
+          || echo "WARNING: not every city was built this time; the rest will be added on the next deploy"
+        rm -f backend/app/data/*.tmp
+        [ -f $$OUT ] || { echo "WARNING: map layer unavailable; deploying without park and road context"; exit 0; }
+        AFTER=$$(md5sum $$OUT | cut -c1-32)
+        if [ "$$BEFORE" != "$$AFTER" ]; then
+          gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz && echo "Saved the updated map layer for future deploys"
         fi
-        gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz && echo "Saved the map layer for future deploys"
 
   - id: build
     name: gcr.io/cloud-builders/docker

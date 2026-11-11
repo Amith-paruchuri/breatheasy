@@ -31,7 +31,7 @@ class RouteRequest(BaseModel):
     origin: LatLng
     destination: LatLng
     mode: TravelMode = TravelMode.WALK
-    preference: Preference = Preference.CLEANEST_AIR
+    preference: Preference = Preference.BALANCED
     max_extra_minutes: float | None = Field(default=None, ge=0, le=180)
     departure_time: datetime | None = None  # naive values are read as Asia/Kolkata
     explore_detours: bool = True
@@ -161,6 +161,7 @@ class AgentRequest(BaseModel):
 class AgentResponse(BaseModel):
     verdict: str
     plan: RouteResponse | None = None
+    mode: TravelMode | None = None  # the travel mode the agent understood (for the Google Maps hand-off)
 
 
 class PlaceSuggestion(BaseModel):

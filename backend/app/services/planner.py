@@ -160,6 +160,8 @@ async def plan_routes(
         max_extra = s.cleanest_air_default_extra_minutes
     else:
         max_extra = s.default_max_extra_minutes
+    if env is not None:
+        env = env.at((req.origin.lat, req.origin.lng))
     use_env = env is not None and not env.empty
 
     for label, p in (("Origin", req.origin), ("Destination", req.destination)):

@@ -151,20 +151,19 @@ def stitch(lines):
     return rings
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--bbox", default="28.20,76.80,28.95,77.75", help="south,west,north,east (Delhi-NCR)")
-    ap.add_argument("--tiles", type=int, default=4, help="split each side into this many tiles")
-    ap.add_argument("--contact", default="", help="email for the Overpass User-Agent")
-    ap.add_argument("--out", default=str(OUT))
-    args = ap.parse_args()
-    s, w, n, e = (float(x) for x in args.bbox.split(","))
-    ua = f"Breatheasy-environment-builder/1.0 ({args.contact or 'no contact given'})"
-    xy = proj((s + n) / 2)
+CITIES = {
+    "Delhi-NCR": (28.20, 76.80, 28.95, 77.75, 4),
+    "Mumbai": (18.88, 72.77, 19.30, 73.10, 3),
+    "Kolkata": (22.40, 88.20, 22.70, 88.50, 3),
+    "Bengaluru": (12.80, 77.45, 13.15, 77.80, 3),
+    "Hyderabad": (17.25, 78.30, 17.60, 78.65, 3),
+}
 
+
+def build_city(s: float, w: float, n: float, e: float, T: int, ua: str) -> dict:
+    xy = proj((s + n) / 2)
     areas: dict[str, dict] = {}
     roads: dict[int, dict] = {}
-    T = args.tiles
     dlat, dlng = (n - s) / T, (e - w) / T
     total = T * T
     for ti in range(T):
@@ -223,22 +222,66 @@ def main() -> None:
                 }
             time.sleep(3)
 
-    out = {
-        "version": 1,
-        "generated": datetime.now(timezone.utc).isoformat(),
+    return {
         "bbox": [s, w, n, e],
-        "source": "© OpenStreetMap contributors, ODbL 1.0",
         "areas": [a for a in areas.values() if a["rings"]],
         "roads": list(roads.values()),
     }
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    with gzip.open(args.out, "wt", encoding="utf-8") as f:
+
+
+def _write(path: str, cities: list[dict]) -> None:
+    out = {
+        "version": 2,
+        "generated": datetime.now(timezone.utc).isoformat(),
+        "source": "© OpenStreetMap contributors, ODbL 1.0",
+        "cities": cities,
+    }
+    tmp = Path(path).with_suffix(".tmp")
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(tmp, "wt", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"))
-    counts = {}
-    for a in out["areas"]:
-        counts[a["kind"]] = counts.get(a["kind"], 0) + 1
+    tmp.replace(path)  # atomic: a timeout mid-city never leaves a broken file
+
+
+def _existing(path: str) -> list[dict]:
+    p = Path(path)
+    if not p.is_file():
+        return []
+    with gzip.open(p, "rt", encoding="utf-8") as f:
+        data = json.load(f)
+    if "cities" in data:
+        return data["cities"]
+    # version 1 file: one Delhi-NCR layer
+    return [{"name": "Delhi-NCR", "bbox": data.get("bbox"), "areas": data.get("areas", []), "roads": data.get("roads", [])}]
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cities", default=",".join(CITIES), help="comma-separated: " + ", ".join(CITIES))
+    ap.add_argument("--contact", default="", help="email for the Overpass User-Agent")
+    ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--rebuild", action="store_true", help="rebuild cities already in the file")
+    ap.add_argument("--tiles", type=int, default=0, help="override tiles per side (default: per city)")
+    args = ap.parse_args()
+    ua = f"Breatheasy-environment-builder/1.0 ({args.contact or 'no contact given'})"
+    have = {c["name"]: c for c in ([] if args.rebuild else _existing(args.out))}
+    wanted = [c.strip() for c in args.cities.split(",") if c.strip()]
+    for name in wanted:
+        if name in have:
+            print(f"{name}: already built, keeping it", flush=True)
+            continue
+        if name not in CITIES:
+            sys.exit(f"Unknown city {name!r}; known: {', '.join(CITIES)}")
+        s, w, n, e, T = CITIES[name]
+        T = args.tiles or T
+        print(f"== {name}", flush=True)
+        have[name] = {"name": name, **build_city(s, w, n, e, T, ua)}
+        _write(args.out, list(have.values()))  # save after every city
+        c = have[name]
+        print(f"{name}: {len(c['areas'])} areas, {len(c['roads'])} main-road segments", flush=True)
+    _write(args.out, list(have.values()))
     size = Path(args.out).stat().st_size / 1e6
-    print(f"Wrote {args.out} ({size:.1f} MB): {counts}, {len(out['roads'])} main-road segments")
+    print(f"Wrote {args.out} ({size:.1f} MB): {', '.join(have)}")
 
 
 if __name__ == "__main__":

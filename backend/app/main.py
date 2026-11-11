@@ -178,6 +178,7 @@ async def config(request: Request):
         "pm25_reference_ugm3": s.pm25_reference_ugm3,
         "cleanest_air_default_extra_minutes": s.cleanest_air_default_extra_minutes,
         "street_context": not request.app.state.env.empty,
+        "street_context_cities": request.app.state.env.cities,
         "maps_browser_key": s.google_maps_browser_key,
         "map_id": s.google_map_id,
         "google_oauth_client_id": s.google_oauth_client_id,

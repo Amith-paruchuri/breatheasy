@@ -1,7 +1,7 @@
-import { useState } from "react";
 import {
+  aqiColor,
+  aqiInk,
   pm25Color,
-  PM25_SAFE_LIMIT,
   aqiLabel,
   fmtDistance,
   fmtDuration,
@@ -64,7 +64,8 @@ interface Props {
   navigateUrl: string;
   onNavigate?: () => void;
   navigateHint?: string;
-  compact?: boolean; // phones: the essentials first, details on demand
+  compact?: boolean; // phones: tighter spacing
+  maxExposure?: number | null; // largest dose among the routes shown, for the bar
 }
 
 function arrival(departure: string, seconds: number) {
@@ -84,39 +85,30 @@ export function RouteCard({
   onNavigate,
   navigateHint,
   compact = false,
+  maxExposure = null,
 }: Props) {
-  const [showDetails, setShowDetails] = useState(false);
-  const details = !compact || showDetails;
-  // PM2.5 leads: it differs far more between streets than the AQI number does.
   const pm = route.mean_pm25 != null ? Math.round(route.mean_pm25) : null;
-  const d =
-    route.mean_pm25 != null && fastestRoute?.mean_pm25 != null
-      ? Math.round(route.mean_pm25 - fastestRoute.mean_pm25)
-      : null;
-  const compare = fastest
-    ? "Fastest route"
-    : d == null
-      ? "Air quality unknown"
-      : Math.abs(d) < 2
-        ? "Similar air to the fastest route"
-        : d < 0
-          ? `${Math.abs(d)} µg/m³ less PM2.5 than the fastest route`
-          : `${d} µg/m³ more PM2.5 than the fastest route`;
-  const pms = route.segments.map((x) => x.pm25).filter((v): v is number => v != null);
-  const lo = pms.length ? Math.round(Math.min(...pms)) : null;
-  const hi = pms.length ? Math.round(Math.max(...pms)) : null;
-  const pmRange = lo == null ? null : lo === hi ? `${lo}` : `${lo}–${hi}`;
-  const scaleTo = Math.max(route.duration_s, fastestRoute?.duration_s ?? 0);
-  const longer =
-    !fastest &&
-    route.delta_exposure_pct != null &&
-    route.delta_exposure_pct > 5 &&
-    d != null &&
-    d < -1;
+  const aqi = route.mean_aqi;
+  // Pollution dose = PM2.5 x minutes spent in it. Shown relative to the fastest route.
+  const dose = route.exposure_pm25;
+  const pct = route.delta_exposure_pct;
+  const doseText = fastest
+    ? "Baseline for comparison"
+    : pct == null
+      ? "Unknown"
+      : Math.abs(pct) < 3
+        ? "About the same as the fastest route"
+        : pct < 0
+          ? `${Math.round(Math.abs(pct))}% less than the fastest route`
+          : `${Math.round(pct)}% more than the fastest route`;
+  const doseCls = !fastest && pct != null && Math.abs(pct) >= 3 ? (pct < 0 ? " better" : " worse") : "";
+  const barW = dose != null && maxExposure ? Math.max(6, Math.min(100, (dose / maxExposure) * 100)) : 0;
+  const cleanerButLonger =
+    !fastest && pct != null && pct >= 3 && pm != null && fastestRoute?.mean_pm25 != null && pm < fastestRoute.mean_pm25 - 1;
 
   return (
     <article
-      className={`rcard${compact ? " is-compact" : ""}${selected ? " is-selected" : ""}${recommended ? " is-rec" : ""}${route.within_budget ? "" : " is-over"}`}
+      className={`rcard rcard2${compact ? " is-compact" : ""}${selected ? " is-selected" : ""}${recommended ? " is-rec" : ""}${route.within_budget ? "" : " is-over"}`}
       onClick={onSelect}
       aria-pressed={selected}
       role="button"
@@ -133,120 +125,64 @@ export function RouteCard({
         ) : (
           <span className="rcard-src">{sourceLabel(route)}</span>
         )}
-        {!route.within_budget && (
-          <span className="rcard-src">Longer than your limit</span>
-        )}
+        {!route.within_budget && <span className="rcard-src">Longer than your limit</span>}
       </header>
 
-      <div className="rcard-head">
-        <div className="rcard-time">
-          <strong>{fmtDuration(route.duration_s)}</strong>
-          {compact && !showDetails ? (
-            <span className="rcard-meta-1">
-              {fmtDistance(route.distance_m)}
-              {route.extra_minutes > 0.5 && (
-                <> · +{Math.round(route.extra_minutes)} min</>
-              )}{" "}
-              · arrive {arrival(departure, route.duration_s)}
-            </span>
-          ) : (
-            <span>
-              Arrive {arrival(departure, route.duration_s)}
-              <i aria-hidden className="sep" />
-              {fmtDistance(route.distance_m)}
-              {route.extra_minutes > 0.5 && (
-                <>
-                  <i aria-hidden className="sep" />+
-                  {Math.round(route.extra_minutes)} min
-                </>
-              )}
-            </span>
-          )}
+      <div className="rcard-time">
+        <strong>{fmtDuration(route.duration_s)}</strong>
+        <span>
+          Arrive {arrival(departure, route.duration_s)} · {fmtDistance(route.distance_m)}
+          {route.extra_minutes > 0.5 && <> · +{Math.round(route.extra_minutes)} min</>}
+        </span>
+      </div>
+
+      <div className="dose" aria-label={`Pollution dose: ${doseText}`}>
+        <div className="dose-head">
+          <span className="dose-label">
+            Pollution dose <small>PM2.5 × minutes</small>
+          </span>
+          <span className={`dose-text${doseCls}`}>{doseText}</span>
         </div>
-        <div
-          className="aqi-chip pm-chip"
-          style={{
-            background: pm25Color(route.mean_pm25),
-            color: pm != null && pm > 120 ? "#fff" : "#1b1b1b",
-          }}
-          aria-label={`Average PM2.5 ${pm ?? "unknown"} micrograms per cubic metre; AQI ${route.mean_aqi ?? "unknown"}`}
-        >
-          <b>{pm ?? "–"}</b>
-          <span>PM2.5</span>
+        <div className="dose-track">
+          <div className="dose-bar" style={{ width: `${barW}%`, background: pm25Color(route.mean_pm25) }} />
         </div>
       </div>
 
-      <p
-        className={`rcard-compare${d != null && d <= -2 ? " better" : d != null && d >= 2 ? " worse" : ""}`}
-      >
-        {compare}
-        {(
-          <span className="rcard-cat">
-            Average AQI {route.mean_aqi ?? "–"} ({aqiLabel(route.mean_aqi).toLowerCase()})
-          </span>
-        )}
-      </p>
-
-      <div className="ribbons">
-        <AirRibbon route={route} scaleTo={scaleTo} />
-        {pmRange && (
-          <p className="rcard-pm">
-            PM2.5 {pmRange} µg/m³
-            {route.mean_pm25 != null && route.mean_pm25 > PM25_SAFE_LIMIT && (
-              <span> · {(route.mean_pm25 / PM25_SAFE_LIMIT).toFixed(1)}× safe limit</span>
-            )}
-          </p>
-        )}
-        {!fastest && fastestRoute && selected && details && (
-          <div className="ribbon-row">
-            <AirRibbon route={fastestRoute} ghost scaleTo={scaleTo} />
-            <span className="ribbon-cap">Fastest route, for comparison</span>
-          </div>
-        )}
+      <div className="air-boxes">
+        <div
+          className="air-box"
+          style={{ background: pm25Color(route.mean_pm25), color: pm != null && pm > 120 ? "#fff" : "#1b1b1b" }}
+        >
+          <b>{pm ?? "–"}</b>
+          <span>Avg PM2.5 · µg/m³</span>
+        </div>
+        <div className="air-box" style={{ background: aqiColor(aqi), color: aqiInk(aqi) }}>
+          <b>{aqi ?? "–"}</b>
+          <span>Avg AQI · {aqiLabel(aqi)}</span>
+        </div>
       </div>
 
       {route.highlights.length > 0 && (
-        <ul className="highlights">
-          {route.highlights.slice(0, details ? 5 : 2).map((h, i) => (
-            <li key={i} className={`hl hl-${h.kind}`}>
-              <Icon name={HL_ICON[h.kind]} size={17} />
-              <span>{h.text}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="passes">
+          <span className="passes-title">You pass through</span>
+          <ul className="highlights">
+            {route.highlights.slice(0, 3).map((h, i) => (
+              <li key={i} className={`hl hl-${h.kind}`}>
+                <Icon name={HL_ICON[h.kind]} size={17} />
+                <span>{h.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
-      {selected && details && (
-        <dl className="rcard-stats">
-          <div>
-            <dt>Worst stretch</dt>
-            <dd>
-              {route.peak_pm25 != null ? Math.round(route.peak_pm25) : "–"} µg/m³{" "}
-              <span>AQI {route.peak_aqi ?? "–"}, {aqiLabel(route.peak_aqi).toLowerCase()}</span>
-            </dd>
-          </div>
-          <div>
-            <dt>Average PM2.5</dt>
-            <dd>
-              {pm ?? "–"} µg/m³ <span>AQI {route.mean_aqi ?? "–"}</span>
-            </dd>
-          </div>
-        </dl>
-      )}
-
-      {selected && longer && details && (
+      {selected && cleanerButLonger && (
         <p className="rcard-note">
-          Cleaner air, but you're outside about{" "}
-          {Math.round(route.extra_minutes)} min longer, so total exposure is ~
-          {Math.round(route.delta_exposure_pct!)}% higher. Great for a run or
-          walk; for a commute, compare with Balanced.
+          Cleaner air, but you're outside longer, so the dose is higher. Good for a run or a walk.
         </p>
       )}
-      {route.coverage < 0.999 && details && (
-        <p className="rcard-note">
-          Air-quality data covered {Math.round(route.coverage * 100)}% of this
-          route.
-        </p>
+      {selected && route.coverage < 0.9 && (
+        <p className="rcard-note">Air-quality data covered {Math.round(route.coverage * 100)}% of this route.</p>
       )}
 
       {selected && (
@@ -264,21 +200,8 @@ export function RouteCard({
             <Icon name="navigate" size={18} />
             Start in Google Maps
           </a>
-          {details && navigateHint && <p className="rcard-hint">{navigateHint}</p>}
+          {navigateHint && <p className="rcard-hint">{navigateHint}</p>}
         </div>
-      )}
-      {compact && (
-        <button
-          type="button"
-          className="rcard-more"
-          aria-expanded={showDetails}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowDetails((v) => !v);
-          }}
-        >
-          {showDetails ? "Fewer details" : "More details"}
-        </button>
       )}
     </article>
   );

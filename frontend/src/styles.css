@@ -1972,3 +1972,25 @@ a {
 .agent-err {
   color: var(--worse);
 }
+
+/* ---- Route card v2: dose first, two equal air boxes, what you pass through ---- */
+.rcard2 .rcard-time { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 12px; }
+.rcard2 .rcard-time strong { font-size: 30px; line-height: 1.1; }
+.rcard2 .rcard-time span { color: var(--fog); font-size: 14px; }
+.dose { margin-bottom: 12px; }
+.dose-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.dose-label { font-weight: 600; font-size: 14px; }
+.dose-label small { font-weight: 400; color: var(--fog); margin-left: 4px; font-size: 12px; }
+.dose-text { font-size: 14px; font-weight: 600; color: var(--fog); }
+.dose-text.better { color: var(--better); }
+.dose-text.worse { color: var(--worse); }
+.dose-track { height: 10px; border-radius: 6px; background: rgba(127, 127, 127, 0.16); overflow: hidden; }
+.dose-bar { height: 100%; border-radius: 6px; transition: width 0.3s ease; }
+.air-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.air-box { border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.air-box b { font-size: 24px; line-height: 1.1; }
+.air-box span { font-size: 12px; font-weight: 500; opacity: 0.9; }
+.passes { margin-bottom: 10px; }
+.passes-title { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fog); margin-bottom: 4px; }
+.rcard2.is-compact .rcard-time strong { font-size: 26px; }
+.rcard2.is-compact .air-box b { font-size: 20px; }

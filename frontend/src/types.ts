@@ -101,6 +101,7 @@ export interface RouteResponse {
 export interface AgentResponse {
   verdict: string;
   plan: RouteResponse | null;
+  mode?: TravelMode | null;
 }
 
 export interface Place {

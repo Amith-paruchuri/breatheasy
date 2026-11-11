@@ -211,8 +211,9 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const [origin, setOrigin] = useState<Place | null>(null);
   const [destination, setDestination] = useState<Place | null>(null);
   const [mode, setMode] = useState<TravelMode>("WALK");
-  const [preference, setPreferenceRaw] = useState<Preference>("cleanest_air");
-  const [budget, setBudgetRaw] = useState(config.cleanest_air_default_extra_minutes);
+  // Default: Balanced, which ranks on pollution dose (PM2.5 x minutes), the number the cards lead with.
+  const [preference, setPreferenceRaw] = useState<Preference>("balanced");
+  const [budget, setBudgetRaw] = useState(config.default_max_extra_minutes);
   const [budgetTouched, setBudgetTouched] = useState(false);
   const setBudget = (n: number) => {
     setBudgetTouched(true);
@@ -242,6 +243,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const [showSettings, setShowSettings] = useState(false);
   const [resultKey, setResultKey] = useState(0);
   const [verdictOverride, setVerdictOverride] = useState<string | null>(null);
+  const [agentMode, setAgentMode] = useState<TravelMode | null>(null);
   const inflight = useRef<AbortController | null>(null);
   const carousel = useRef<HTMLDivElement>(null);
 
@@ -273,6 +275,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         );
         setResult(res);
         setVerdictOverride(null);
+        setAgentMode(null);
         if (res.plan && res.plan.plan !== "anonymous") acct.setPlan({ ...res.plan, street_level: res.plan.used < res.plan.limit });
         setSelectedId(res.recommended_id);
         setLoggedRoutes(new Set());
@@ -295,6 +298,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       if (res.plan) {
         setResult(res.plan);
         setVerdictOverride(res.verdict);
+        setAgentMode(res.mode ?? null);
         setSelectedId(res.plan.recommended_id);
         setLoggedRoutes(new Set());
         setResultKey((k) => k + 1);
@@ -531,10 +535,17 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             fastest={r.id === result.fastest_id}
             departure={result.data.departure_time}
             onSelect={() => select(r.id)}
-            navigateUrl={googleMapsUrl(r, fastestRoute, origin!.location, destination!.location, mode)}
+            navigateUrl={googleMapsUrl(
+              r,
+              fastestRoute,
+              origin?.location ?? r.segments[0]?.path[0],
+              destination?.location ?? r.segments[r.segments.length - 1]?.path.slice(-1)[0],
+              agentMode ?? mode,
+            )}
             onNavigate={() => onNavigate(r)}
             navigateHint={me ? (loggedRoutes.has(r.id) ? "Added to your trip log." : "We'll add this trip to your log.") : undefined}
             compact={!desktop}
+            maxExposure={Math.max(0, ...result.routes.map((x) => x.exposure_pm25 ?? 0)) || null}
           />
         </div>
       ))}
@@ -716,7 +727,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         <div className={`mtop${searching ? " is-searching" : ""}${collapsed ? " is-collapsed" : ""}`}>
           {collapsed ? (
             <div className="tripbar">
-              <button type="button" className="tripbar-main" onClick={() => setEditTrip(true)} aria-label={`Change trip: from ${origin!.label} to ${destination!.label}`}>
+              <button type="button" className="tripbar-main" onClick={() => setEditTrip(true)} aria-label={`Change trip: from ${origin?.label ?? "your location"} to ${destination?.label ?? "your destination"}`}>
                 <span className="tripbar-route">
                   <span className="tripbar-from">{short(origin)}</span>
                   <Icon name="chevron" size={14} />
