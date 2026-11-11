@@ -238,7 +238,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
               </li>
             ))}
           {showQuick && role === "destination" && saved.length === 0 && recents.length === 0 && (
-            <li className="suggest-hint">Search for a place in Delhi-NCR</li>
+            <li className="suggest-hint">Search for any place in India</li>
           )}
           {typing &&
             items.map((s) => (

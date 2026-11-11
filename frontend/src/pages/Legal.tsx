@@ -38,7 +38,7 @@ export function PrivacyPage() {
   return (
     <Shell title="Privacy policy">
       <p>
-        Breatheasy is operated by {OPERATOR}. It suggests routes in Delhi-NCR with lower estimated air-pollution
+        Breatheasy is operated by {OPERATOR}. It suggests routes across India with lower estimated air-pollution
         exposure. This page explains what we collect, why, and how to delete it. Contact: {CONTACT}.
       </p>
 

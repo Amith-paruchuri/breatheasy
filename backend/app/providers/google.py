@@ -261,7 +261,8 @@ class GooglePlaces:
             "input": query,
             "includedRegionCodes": ["in"],
             "languageCode": "en",
-            "locationRestriction": {
+            # Bias, not restrict: home-region places rank first, the rest of India still shows.
+            "locationBias": {
                 "rectangle": {
                     "low": {"latitude": south, "longitude": west},
                     "high": {"latitude": north, "longitude": east},

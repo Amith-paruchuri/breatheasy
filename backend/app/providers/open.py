@@ -226,7 +226,7 @@ class OpenPlaces:
             "q": query,
             "limit": "7",
             "lang": "en",
-            "bbox": f"{west},{south},{east},{north}",
+            "bbox": "68.0,6.5,97.5,37.2",  # India; the lat/lon below makes home-region places rank first
             "lat": f"{(south + north) / 2:.4f}",
             "lon": f"{(west + east) / 2:.4f}",
         }

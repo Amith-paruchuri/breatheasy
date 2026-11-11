@@ -122,7 +122,7 @@ def check_trip_length(req: RouteRequest, s: Settings) -> None:
 
 
 def in_region(p: LatLng, s: Settings) -> bool:
-    return s.region_south <= p.lat <= s.region_north and s.region_west <= p.lng <= s.region_east
+    return s.service_south <= p.lat <= s.service_north and s.service_west <= p.lng <= s.service_east
 
 
 def _adjusted(r, factor: float):
@@ -164,7 +164,7 @@ async def plan_routes(
 
     for label, p in (("Origin", req.origin), ("Destination", req.destination)):
         if not in_region(p, s):
-            warnings.append(f"{label} is outside the {s.region_name} pilot area; results are less tested there.")
+            warnings.append(f"{label} is outside {s.service_name}; Breatheasy's air data and routes are tuned for {s.service_name}.")
 
     check_trip_length(req, s)
     cands, cw = await _candidates_cached(

@@ -51,8 +51,14 @@ def test_preferences_change_choice_consistently(client):
 
 
 def test_outside_region_warns(client):
+    # Mumbai is inside the service area (India): no warning
     body = client.post(
         "/api/routes", json={"origin": {"lat": 19.07, "lng": 72.87}, "destination": {"lat": 19.10, "lng": 72.90}}
+    ).json()
+    assert not any("outside" in w for w in body["warnings"])
+    # outside India: warned
+    body = client.post(
+        "/api/routes", json={"origin": {"lat": 25.20, "lng": 55.27}, "destination": {"lat": 25.22, "lng": 55.30}}
     ).json()
     assert any("outside" in w for w in body["warnings"])
 

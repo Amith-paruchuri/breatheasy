@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     max_concurrent_aq_calls: int = 24
 
     # --- Region (Delhi-NCR pilot) ----------------------------------------
+    # Service area: routes and air data work anywhere in it (India).
+    service_name: str = "India"
+    service_south: float = 6.5
+    service_west: float = 68.0
+    service_north: float = 37.2
+    service_east: float = 97.5
+    # Home region: where the map opens and place search leans first. Street-level
+    # context (parks, lakes, main roads) is built for this region.
     region_name: str = "Delhi-NCR"
     region_south: float = 28.20
     region_west: float = 76.80

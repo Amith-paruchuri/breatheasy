@@ -1,7 +1,7 @@
 {
   "name": "Breatheasy",
   "short_name": "Breatheasy",
-  "description": "Routes in Delhi-NCR ranked by the air you'll breathe.",
+  "description": "Routes across India ranked by the air you'll breathe.",
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",

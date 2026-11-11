@@ -166,6 +166,7 @@ async def config(request: Request):
         "data_note": request.app.state.providers.data_note,
         "region": {
             "name": s.region_name,
+            "service_name": s.service_name,
             "south": s.region_south,
             "west": s.region_west,
             "north": s.region_north,

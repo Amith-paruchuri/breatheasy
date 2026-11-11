@@ -116,7 +116,7 @@ export interface AppConfig {
   provider: string;
   mock: boolean;
   data_note: string;
-  region: { name: string; south: number; west: number; north: number; east: number };
+  region: { name: string; service_name?: string; south: number; west: number; north: number; east: number };
   default_max_extra_minutes: number;
   meaningful_diff_pct: number;
   pm25_reference_ugm3: number;

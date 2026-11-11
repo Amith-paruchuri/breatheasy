@@ -123,7 +123,7 @@ async def test_photon_places_roundtrip():
     p = make_providers(calls)
     s = await p.places.autocomplete("aiims", None, (28.2, 76.8, 28.95, 77.75), Usage())
     assert s[0].primary.startswith("All India") and "New Delhi" in s[0].secondary
-    assert calls[-1].url.params["bbox"] == "76.8,28.2,77.75,28.95"
+    assert calls[-1].url.params["bbox"] == "68.0,6.5,97.5,37.2"
     d = await p.places.details(s[0].place_id, None, Usage())
     assert d.location.lat == pytest.approx(28.5672) and d.name.startswith("All India")
     assert decode_place_id(s[1].place_id).name == "Aurobindo Marg"

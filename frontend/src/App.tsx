@@ -686,7 +686,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           <Mark />
           <div className="brand-name">
             <h1>Breatheasy</h1>
-            <p>Cleaner-air routes across {config.region.name}</p>
+            <p>Cleaner-air routes across {config.region.service_name ?? "India"}</p>
           </div>
           {accountButton}
         </header>
