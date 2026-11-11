@@ -1,7 +1,7 @@
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AccountProvider, useAccount } from "./account";
-import { ApiError, addPlace, getConfig, logTrip, planRoutes } from "./api";
+import { ApiError, addPlace, getConfig, logTrip, planRoutes, runAgent, type AgentResponse } from "./api";
 import { AccountPanel } from "./components/AccountPanel";
 import { BottomSheet, heights, type Snap } from "./components/BottomSheet";
 import { Icon } from "./components/Icon";
@@ -112,6 +112,90 @@ function Legend({ explain = false }: { explain?: boolean }) {
   );
 }
 
+function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const ac = useRef<AbortController | null>(null);
+
+  const submit = useCallback(
+    async (q: string) => {
+      if (!q.trim() || loading) return;
+      setLoading(true);
+      ac.current?.abort();
+      const ctrl = new AbortController();
+      ac.current = ctrl;
+      const done = () => {
+        if (ac.current === ctrl) setLoading(false);
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await runAgent({ query: q, origin: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, ctrl.signal);
+            onPlan(res);
+          } catch (e) {
+            if ((e as Error).name !== "AbortError") alert(e instanceof ApiError ? e.message : "Something didn't work.");
+          } finally {
+            done();
+          }
+        },
+        async () => {
+          // Fallback to Delhi center if geolocation is denied/fails
+          try {
+            const res = await runAgent({ query: q, origin: { lat: 28.61, lng: 77.23 } }, ctrl.signal);
+            onPlan(res);
+          } catch (e) {
+            if ((e as Error).name !== "AbortError") alert(e instanceof ApiError ? e.message : "Something didn't work.");
+          } finally {
+            done();
+          }
+        },
+        { timeout: 5000 },
+      );
+    },
+    [loading, onPlan],
+  );
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery(transcript);
+      submit(transcript);
+    };
+    recognition.start();
+  };
+
+  const hasMic = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  return (
+    <div className="agent-wrap">
+      <div className="agent-box">
+        <input
+          type="text"
+          placeholder="Ask Breatheasy (e.g. reach Hauz Khas by 9 am)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit(query)}
+          disabled={loading}
+        />
+        {hasMic && (
+          <button type="button" className={`mic-btn${listening ? " is-listening" : ""}`} onClick={startListening} aria-label="Speak">
+            <Icon name="mic" size={20} />
+          </button>
+        )}
+      </div>
+      {loading && <span className="spinner small agent-loading" />}
+    </div>
+  );
+}
+
 function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const acct = useAccount();
   const online = useOnline();
@@ -149,6 +233,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const [editTrip, setEditTrip] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [resultKey, setResultKey] = useState(0);
+  const [verdictOverride, setVerdictOverride] = useState<string | null>(null);
   const inflight = useRef<AbortController | null>(null);
   const carousel = useRef<HTMLDivElement>(null);
 
@@ -179,6 +264,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           ctrl.signal,
         );
         setResult(res);
+        setVerdictOverride(null);
         if (res.plan && res.plan.plan !== "anonymous") acct.setPlan({ ...res.plan, street_level: res.plan.used < res.plan.limit });
         setSelectedId(res.recommended_id);
         setLoggedRoutes(new Set());
@@ -195,6 +281,23 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     }, 280);
     return () => clearTimeout(t);
   }, [origin, destination, mode, preference, budget, leaveLater, departure, retry]);
+
+  const onAgentPlan = useCallback(
+    (res: AgentResponse) => {
+      if (res.plan) {
+        setResult(res.plan);
+        setVerdictOverride(res.verdict);
+        setSelectedId(res.plan.recommended_id);
+        setLoggedRoutes(new Set());
+        setResultKey((k) => k + 1);
+        setSnap("half");
+        carousel.current?.scrollTo({ left: 0 });
+      } else {
+        setToast(res.verdict);
+      }
+    },
+    [acct],
+  );
 
   // Seconds since the current search started, for the progress text.
   useEffect(() => {
@@ -393,8 +496,14 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   }
   const verdict = result && (
     <div className="verdict">
-      <p>{headline}</p>
-      <p className="verdict-sub">{subline}</p>
+      {verdictOverride ? (
+        <p style={{ fontSize: "16px", fontWeight: 500, lineHeight: 1.4 }}>{verdictOverride}</p>
+      ) : (
+        <>
+          <p>{headline}</p>
+          <p className="verdict-sub">{subline}</p>
+        </>
+      )}
       {c && c.meaningful && c.shared_cells_pct != null && c.shared_cells_pct > 60 && (
         <p className="verdict-sub">These routes share most of their air-quality areas, so treat the difference as approximate.</p>
       )}
@@ -574,6 +683,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           {accountButton}
         </header>
         {banners}
+        <AgentBox onPlan={onAgentPlan} />
         {search}
         <ModePicker mode={mode} onMode={setMode} />
         {settings}
@@ -623,6 +733,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                   {accountButton}
                 </div>
               )}
+              <AgentBox onPlan={onAgentPlan} />
               {search}
               {!searching && !tripSet && <ModePicker mode={mode} onMode={setMode} />}
             </>

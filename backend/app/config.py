@@ -129,6 +129,11 @@ class Settings(BaseSettings):
     balanced_pct_per_min: float = 1.5  # balanced mode: 1 extra minute must buy >=1.5% less exposure
     pm25_reference_ugm3: float = 60.0  # India NAAQS 24-h PM2.5 level, shown for reference only
 
+    # --- Agent -----------------------------------------------------------
+    agent_llm: Literal["rules", "vertex"] = "rules"
+    vertex_project: str = ""
+    vertex_location: str = "us-central1"
+
     # --- Cost tracking -----------------------------------------------------
     # Google Maps Platform India price list, USD per 1,000 billable calls, for usage
     # above the free monthly allowance and below 5 million calls (checked Nov 2026:

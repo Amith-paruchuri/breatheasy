@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import __version__
+from .agent import run_agent
 from .auth import TokenVerifier, get_db, optional_user
 from .budget import SpendGuard
 from .config import get_settings
@@ -23,7 +24,16 @@ from .db import Database, User
 from .environment import EnvironmentLayer
 from .migrate import run_migrations
 from .plans import consume, entitlement
-from .models import PlaceDetails, PlaceSuggestion, RouteRequest, RouteResponse, TravelMode, Usage
+from .models import (
+    AgentRequest,
+    AgentResponse,
+    PlaceDetails,
+    PlaceSuggestion,
+    RouteRequest,
+    RouteResponse,
+    TravelMode,
+    Usage,
+)
 from .providers import ProviderError, build_providers
 from .routers import account, billing
 from .services.airquality import AQCache, AQService
@@ -241,6 +251,40 @@ async def routes(
             consume(user, ent.status)
             await db.commit()
         resp.plan = ent.status
+    return resp
+
+
+@app.post("/api/agent", response_model=AgentResponse)
+async def agent(
+    request: Request,
+    body: AgentRequest,
+    user: User | None = Depends(optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not request.app.state.route_limiter.check(client_ip(request)):
+        raise HTTPException(429, "Too many agent requests. Try again in a minute.")
+    s = request.app.state.settings
+    guard = request.app.state.spend
+    ent = entitlement(user, s)
+    over = await guard.over_budget()
+
+    resp = await run_agent(
+        body,
+        request.app.state.providers,
+        request.app.state.aq,
+        s,
+        request.app.state.env,
+        force_open=over or not ent.street,
+    )
+    if resp.plan:
+        await guard.record(resp.plan.usage, None)
+        if ent.status is not None:
+            street = ent.street and not over and resp.plan.usage.aq_source != "open"
+            ent.status.street_level = street
+            if street and user is not None:
+                consume(user, ent.status)
+                await db.commit()
+            resp.plan.plan = ent.status
     return resp
 
 

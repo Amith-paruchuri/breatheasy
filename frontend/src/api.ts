@@ -119,6 +119,32 @@ export async function planRoutes(q: RouteQuery, signal?: AbortSignal, timeoutMs 
   }
 }
 
+export interface AgentRequest {
+  query: string;
+  origin: LatLng;
+}
+
+export interface AgentResponse {
+  verdict: string;
+  plan: RouteResponse | null;
+}
+
+export async function runAgent(q: AgentRequest, signal?: AbortSignal, timeoutMs = 45000): Promise<AgentResponse> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new DOMException("timeout", "TimeoutError")), timeoutMs);
+  const onAbort = () => ctrl.abort(signal?.reason);
+  signal?.addEventListener("abort", onAbort);
+  try {
+    return await req<AgentResponse>("/api/agent", { ...json("POST", q), signal: ctrl.signal });
+  } catch (e) {
+    if (ctrl.signal.aborted && !signal?.aborted) throw new ApiError(friendly(504), 504, "slow");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
 // ---------- account ----------
 export const getMe = () => req<{ user: Me | null; accounts_enabled: boolean; plan?: PlanStatus | null }>("/api/me");
 export const signInWithGoogle = (credential: string) =>

@@ -41,19 +41,27 @@ _CAND_CACHE: dict[tuple, tuple[float, list, list[str], str | None]] = {}
 
 
 async def _candidates_cached(
-    req: RouteRequest, providers: Providers, departure, s: Settings, usage: Usage, env, max_extra: float
+    req: RouteRequest,
+    providers: Providers,
+    departure,
+    s: Settings,
+    usage: Usage,
+    env,
+    max_extra: float,
+    route_departure: datetime | None = None,
 ):
     # Candidates depend on the time budget only through which parks are in reach, so
     # bucket it: moving the slider re-ranks from cache instead of new Routes calls.
     bucket = next((b for b in (10, 20, 30, 45, 60, 90, 120, 180) if max_extra <= b), 180)
     max_extra = bucket
+    cand_departure = route_departure or (departure if req.departure_time else None)
     key = (
         bucket,
         providers.name,
         round(req.origin.lat, 5), round(req.origin.lng, 5),
         round(req.destination.lat, 5), round(req.destination.lng, 5),
         req.mode.value,
-        req.departure_time.isoformat() if req.departure_time else None,
+        cand_departure.isoformat() if cand_departure else None,
         req.explore_detours,
     )
     hit = _CAND_CACHE.get(key)
@@ -65,7 +73,7 @@ async def _candidates_cached(
     o = (req.origin.lat, req.origin.lng)
     d = (req.destination.lat, req.destination.lng)
     cands, warns = await generate_candidates(
-        providers.routes, o, d, req.mode, departure if req.departure_time else None, req.explore_detours, s, usage,
+        providers.routes, o, d, req.mode, cand_departure, req.explore_detours, s, usage,
         env=env, max_extra_min=max_extra,
     )
     usage.routes_source = usage.routes_source or providers.name
@@ -133,6 +141,7 @@ async def plan_routes(
     env: EnvironmentLayer | None = None,
     force_open: bool = False,
     open_reason: str | None = None,
+    route_departure: datetime | None = None,
 ) -> RouteResponse:
     usage = Usage()
     if force_open and hasattr(providers.routes, "secondary"):
@@ -158,7 +167,9 @@ async def plan_routes(
             warnings.append(f"{label} is outside the {s.region_name} pilot area; results are less tested there.")
 
     check_trip_length(req, s)
-    cands, cw = await _candidates_cached(req, providers, departure, s, usage, env if use_env else None, max_extra)
+    cands, cw = await _candidates_cached(
+        req, providers, departure, s, usage, env if use_env else None, max_extra, route_departure=route_departure
+    )
     warnings += cw
 
     # Segment every candidate (coarser on long routes so a search stays fast),

@@ -96,6 +96,11 @@ export interface RouteResponse {
   warnings: string[];
 }
 
+export interface AgentResponse {
+  verdict: string;
+  plan: RouteResponse | null;
+}
+
 export interface Place {
   label: string;
   location: LatLng;

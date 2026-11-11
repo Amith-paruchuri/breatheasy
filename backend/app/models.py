@@ -151,6 +151,16 @@ class RouteResponse(BaseModel):
     plan: PlanStatus | None = None
 
 
+class AgentRequest(BaseModel):
+    query: str
+    origin: LatLng
+
+
+class AgentResponse(BaseModel):
+    verdict: str
+    plan: RouteResponse | None = None
+
+
 class PlaceSuggestion(BaseModel):
     place_id: str
     primary: str
