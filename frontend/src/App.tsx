@@ -116,12 +116,14 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const ac = useRef<AbortController | null>(null);
 
   const submit = useCallback(
     async (q: string) => {
       if (!q.trim() || loading) return;
       setLoading(true);
+      setErr(null);
       ac.current?.abort();
       const ctrl = new AbortController();
       ac.current = ctrl;
@@ -135,7 +137,7 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
             const res = await runAgent({ query: q, origin: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, ctrl.signal);
             onPlan(res);
           } catch (e) {
-            if ((e as Error).name !== "AbortError") alert(e instanceof ApiError ? e.message : "Something didn't work.");
+            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
           } finally {
             done();
           }
@@ -146,12 +148,12 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
             const res = await runAgent({ query: q, origin: { lat: 28.61, lng: 77.23 } }, ctrl.signal);
             onPlan(res);
           } catch (e) {
-            if ((e as Error).name !== "AbortError") alert(e instanceof ApiError ? e.message : "Something didn't work.");
+            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
           } finally {
             done();
           }
         },
-        { timeout: 5000 },
+        { timeout: 5000, maximumAge: 300000 },
       );
     },
     [loading, onPlan],
@@ -192,6 +194,12 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
         )}
       </div>
       {loading && <span className="spinner small agent-loading" />}
+      {loading && <p className="agent-note">Comparing routes and departure times…</p>}
+      {err && !loading && (
+        <p className="agent-note agent-err" role="alert">
+          {err}
+        </p>
+      )}
     </div>
   );
 }

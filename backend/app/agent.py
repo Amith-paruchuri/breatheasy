@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
@@ -155,13 +156,18 @@ async def run_agent(
         latest_dep = arrive_by - timedelta(seconds=fastest_duration)
         if latest_dep < now:
             latest_dep = now
-        departures = [latest_dep - timedelta(minutes=i * 10) for i in range(6)]
+        departures = [latest_dep - timedelta(minutes=i * 10) for i in range(4)]
         departures = [d for d in departures if d >= now - timedelta(minutes=5)]
     else:
-        departures = [now + timedelta(minutes=i * 10) for i in range(6)]
+        departures = [now + timedelta(minutes=i * 15) for i in range(4)]
 
-    plans = []
-    for dep in departures:
+    # All departure times at once: the routes come from the cache (route_departure),
+    # so each call only adds air-quality lookups, and running them together keeps
+    # the whole answer within a few seconds of a single search.
+    if not departures:
+        departures = [now]
+
+    async def one(dep):
         r = RouteRequest(
             origin=origin_ll,
             destination=dest_ll,
@@ -170,8 +176,10 @@ async def run_agent(
             departure_time=dep,
             max_extra_minutes=agent_max_extra,
         )
-        p = await plan_routes(r, providers, aq, s, env, force_open=force_open, route_departure=route_departure)
-        plans.append((dep, p))
+        return dep, await plan_routes(r, providers, aq, s, env, force_open=force_open, route_departure=route_departure)
+
+    plans = list(await asyncio.gather(*(one(d) for d in departures)))
+    for _, p in plans:
         _merge_usage(usage, p.usage)
 
     best_dep, best_route, best_plan = None, None, None

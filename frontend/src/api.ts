@@ -129,7 +129,7 @@ export interface AgentResponse {
   plan: RouteResponse | null;
 }
 
-export async function runAgent(q: AgentRequest, signal?: AbortSignal, timeoutMs = 45000): Promise<AgentResponse> {
+export async function runAgent(q: AgentRequest, signal?: AbortSignal, timeoutMs = 60000): Promise<AgentResponse> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(new DOMException("timeout", "TimeoutError")), timeoutMs);
   const onAbort = () => ctrl.abort(signal?.reason);
