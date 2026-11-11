@@ -121,7 +121,7 @@ class Settings(BaseSettings):
     # --- Ranking ---------------------------------------------------------
     default_max_extra_minutes: float = 10.0
     meaningful_diff_pct: float = 10.0  # below this, routes are treated as equivalent
-    meaningful_aqi_points: float = 10.0  # cleanest-air mode: smaller AQI gains count as "about the same"
+    meaningful_pm25_ugm3: float = 5.0  # cleanest-air mode: smaller PM2.5 gains count as "about the same"
     cleanest_air_default_extra_minutes: float = 45.0  # default time budget when hunting for the cleanest air
     green_detours: int = 3  # extra candidate routes through nearby parks / lakes
     green_detour_min_area_m2: float = 30_000.0

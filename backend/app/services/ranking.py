@@ -1,6 +1,6 @@
 """Route selection (Step 5 in the proposal).
 
-- cleanest_air: lowest time-weighted average AQI (India CPCB scale) within a
+- cleanest_air: lowest time-weighted average PM2.5 (µg/m³) within a
             generous time budget: for people who want the cleanest air and will
             take a longer way for it (runs, walks, unhurried trips). Note this can
             mean MORE total exposure than the fastest route if the trip is much
@@ -28,44 +28,50 @@ class Scored:
     exposure: float | None
     cells: set
     mean_aqi: float | None = None
+    mean_pm25: float | None = None
 
 
-def pick_cleanest_air(routes: list[Scored], max_extra_min: float, meaningful_points: float) -> tuple[str, str, dict]:
+def pick_cleanest_air(routes: list[Scored], max_extra_min: float, meaningful_ugm3: float) -> tuple[str, str, dict]:
+    """Lowest average PM2.5 within the time budget. PM2.5 varies far more from street to
+    street than the AQI number (which flattens within each band), so it ranks routes;
+    the AQI is still reported alongside."""
     fastest = min(routes, key=lambda r: r.duration_s)
     budget_s = fastest.duration_s + max_extra_min * 60
-    eligible = [r for r in routes if r.duration_s <= budget_s + 1e-6 and r.mean_aqi is not None]
-    base = {"basis": "aqi", "fastest_aqi": round(fastest.mean_aqi) if fastest.mean_aqi is not None else None}
-    if not eligible or fastest.mean_aqi is None:
+    eligible = [r for r in routes if r.duration_s <= budget_s + 1e-6 and r.mean_pm25 is not None]
+    rnd = lambda v: round(v) if v is not None else None  # noqa: E731
+    base = {"basis": "pm25", "fastest_aqi": rnd(fastest.mean_aqi), "fastest_pm25": rnd(fastest.mean_pm25)}
+    if not eligible or fastest.mean_pm25 is None:
         return fastest.id, fastest.id, {
             **base, "meaningful": False, "reduction_pct": None, "extra_minutes": 0.0, "shared_cells_pct": None,
-            "recommended_aqi": base["fastest_aqi"],
+            "recommended_aqi": base["fastest_aqi"], "recommended_pm25": base["fastest_pm25"],
             "message": "No air-quality data was available for this trip, so routes are ranked by time only.",
         }
-    # Lowest average AQI; routes within 3 points count as a tie and the quicker one wins.
-    best_aqi = min(r.mean_aqi for r in eligible)
-    chosen = min((r for r in eligible if r.mean_aqi <= best_aqi + 3), key=lambda r: r.duration_s)
-    gain = fastest.mean_aqi - chosen.mean_aqi
-    meaningful = chosen is not fastest and gain >= meaningful_points
+    # Lowest average PM2.5; routes within 2 µg/m³ count as a tie and the quicker one wins.
+    best = min(r.mean_pm25 for r in eligible)
+    chosen = min((r for r in eligible if r.mean_pm25 <= best + 2), key=lambda r: r.duration_s)
+    gain = fastest.mean_pm25 - chosen.mean_pm25
+    meaningful = chosen is not fastest and gain >= meaningful_ugm3
     if chosen is not fastest and not meaningful:
         chosen = fastest
     extra = (chosen.duration_s - fastest.duration_s) / 60
-    pct = gain / fastest.mean_aqi * 100 if fastest.mean_aqi else None
+    pct = gain / fastest.mean_pm25 * 100 if fastest.mean_pm25 else None
     if chosen is fastest:
         if gain > 0.5:
-            msg = (f"Air is about the same on every route (average AQI within {round(gain)} points), "
+            msg = (f"Air is about the same on every route (average PM2.5 within {round(gain)} \u00b5g/m\u00b3), "
                    "so the fastest route is recommended.")
         else:
             msg = "The fastest route also has the cleanest air."
     else:
-        msg = (f"Cleanest air: average AQI {round(chosen.mean_aqi)} instead of {round(fastest.mean_aqi)} "
-               f"on the fastest route, for {extra:+.0f} min.")
+        msg = (f"Cleanest air: average PM2.5 {round(chosen.mean_pm25)} \u00b5g/m\u00b3 instead of "
+               f"{round(fastest.mean_pm25)} on the fastest route, for {extra:+.0f} min.")
     shared = None
     if chosen is not fastest and fastest.cells and chosen.cells:
         shared = len(fastest.cells & chosen.cells) / len(chosen.cells) * 100
     return chosen.id, fastest.id, {
         **base,
         "meaningful": meaningful,
-        "recommended_aqi": round(chosen.mean_aqi),
+        "recommended_aqi": rnd(chosen.mean_aqi),
+        "recommended_pm25": round(chosen.mean_pm25),
         "reduction_pct": round(pct, 1) if pct is not None and meaningful else (0.0 if pct is not None else None),
         "extra_minutes": round(extra, 1),
         "shared_cells_pct": round(shared, 0) if shared is not None else None,
@@ -79,10 +85,10 @@ def pick(
     max_extra_min: float,
     pct_per_min: float,
     meaningful_pct: float,
-    meaningful_aqi_points: float = 10.0,
+    meaningful_pm25_ugm3: float = 5.0,
 ) -> tuple[str, str, dict]:
     if preference == Preference.CLEANEST_AIR:
-        return pick_cleanest_air(routes, max_extra_min, meaningful_aqi_points)
+        return pick_cleanest_air(routes, max_extra_min, meaningful_pm25_ugm3)
     fastest = min(routes, key=lambda r: r.duration_s)
     budget_s = fastest.duration_s + max_extra_min * 60
 

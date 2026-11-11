@@ -276,10 +276,10 @@ async def plan_routes(
                 hotspots=hotspots,
             )
         )
-        scored.append(Scored(rid, cand.route.duration_s, ex.exposure_pm25, cells, mean_aqi))
+        scored.append(Scored(rid, cand.route.duration_s, ex.exposure_pm25, cells, mean_aqi, ex.mean_pm25))
 
     rec_id, fast_id, comp = pick(
-        scored, req.preference, max_extra, s.balanced_pct_per_min, s.meaningful_diff_pct, s.meaningful_aqi_points
+        scored, req.preference, max_extra, s.balanced_pct_per_min, s.meaningful_diff_pct, s.meaningful_pm25_ugm3
     )
     fastest = next(r for r in routes_out if r.id == fast_id)
     for r in routes_out:
@@ -292,7 +292,7 @@ async def plan_routes(
 
     # Recommended first, then cleanest air (or least exposure), unknown last, then time.
     if req.preference == Preference.CLEANEST_AIR:
-        routes_out.sort(key=lambda r: (r.id != rec_id, r.mean_aqi is None, r.mean_aqi or 0, r.duration_s))
+        routes_out.sort(key=lambda r: (r.id != rec_id, r.mean_pm25 is None, r.mean_pm25 or 0, r.duration_s))
     else:
         routes_out.sort(
             key=lambda r: (r.id != rec_id, r.exposure_pm25 is None, r.exposure_pm25 or 0, r.duration_s)

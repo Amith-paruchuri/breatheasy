@@ -21,7 +21,7 @@ class TravelMode(str, Enum):
 
 
 class Preference(str, Enum):
-    CLEANEST_AIR = "cleanest_air"  # lowest average AQI, even if it takes much longer
+    CLEANEST_AIR = "cleanest_air"  # lowest average PM2.5, even if it takes much longer
     CLEANEST = "cleanest"  # lowest total exposure (dose) within the time budget
     BALANCED = "balanced"
     FASTEST = "fastest"
@@ -95,9 +95,11 @@ class RouteOut(BaseModel):
 
 class Comparison(BaseModel):
     meaningful: bool
-    basis: str = "exposure"  # "aqi" (cleanest_air) or "exposure"
+    basis: str = "exposure"  # "pm25" (cleanest_air: average PM2.5) or "exposure"
     recommended_aqi: int | None = None
     fastest_aqi: int | None = None
+    recommended_pm25: int | None = None
+    fastest_pm25: int | None = None
     reduction_pct: float | None
     extra_minutes: float
     shared_cells_pct: float | None

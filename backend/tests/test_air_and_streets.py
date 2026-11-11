@@ -96,21 +96,22 @@ def test_highlights_text():
 
 # ---------------- ranking ----------------
 def test_cleanest_air_takes_a_much_longer_route_when_air_is_clearly_better():
-    fast = Scored("fast", 1800, 3000.0, set(), mean_aqi=260)
-    green = Scored("green", 1800 + 30 * 60, 3900.0, set(), mean_aqi=180)  # +30 min, more total dose
-    near = Scored("near", 1900, 2950.0, set(), mean_aqi=255)
-    rec, f, c = pick([fast, green, near], Preference.CLEANEST_AIR, 45, 1.5, 10, 10)
-    assert (rec, f) == ("green", "fast") and c["basis"] == "aqi" and c["meaningful"]
-    assert c["recommended_aqi"] == 180 and c["fastest_aqi"] == 260 and "180" in c["message"]
+    fast = Scored("fast", 1800, 3000.0, set(), mean_aqi=260, mean_pm25=110)
+    green = Scored("green", 1800 + 30 * 60, 3900.0, set(), mean_aqi=180, mean_pm25=85)  # +30 min, more total dose
+    near = Scored("near", 1900, 2950.0, set(), mean_aqi=255, mean_pm25=108)
+    rec, f, c = pick([fast, green, near], Preference.CLEANEST_AIR, 45, 1.5, 10, 5)
+    assert (rec, f) == ("green", "fast") and c["basis"] == "pm25" and c["meaningful"]
+    assert c["recommended_pm25"] == 85 and c["fastest_pm25"] == 110 and "85" in c["message"]
+    assert c["recommended_aqi"] == 180 and c["fastest_aqi"] == 260  # AQI still reported
     # outside the time budget it is not chosen
-    rec, _, _ = pick([fast, green, near], Preference.CLEANEST_AIR, 20, 1.5, 10, 10)
+    rec, _, _ = pick([fast, green, near], Preference.CLEANEST_AIR, 20, 1.5, 10, 5)
     assert rec == "fast"
 
 
 def test_cleanest_air_ignores_tiny_differences():
-    fast = Scored("fast", 1800, 3000.0, set(), mean_aqi=200)
-    other = Scored("other", 2400, 2900.0, set(), mean_aqi=195)
-    rec, _, c = pick([fast, other], Preference.CLEANEST_AIR, 45, 1.5, 10, 10)
+    fast = Scored("fast", 1800, 3000.0, set(), mean_aqi=200, mean_pm25=80)
+    other = Scored("other", 2400, 2900.0, set(), mean_aqi=195, mean_pm25=77)
+    rec, _, c = pick([fast, other], Preference.CLEANEST_AIR, 45, 1.5, 10, 5)
     assert rec == "fast" and not c["meaningful"] and "about the same" in c["message"]
 
 
@@ -124,7 +125,7 @@ def test_plan_has_aqi_highlights_and_a_green_corridor(env):
                        mode=TravelMode.WALK)
     resp = asyncio.run(plan_routes(req, p, aq, s, env))
     assert resp.preference == Preference.CLEANEST_AIR and resp.max_extra_minutes == s.cleanest_air_default_extra_minutes
-    assert resp.comparison.basis == "aqi"
+    assert resp.comparison.basis == "pm25"
     sources = {r.source for r in resp.routes}
     assert "green" in sources
     green = next(r for r in resp.routes if r.source == "green")

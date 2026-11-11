@@ -67,8 +67,10 @@ export interface RouteResponse {
   max_extra_minutes: number;
   comparison: {
     meaningful: boolean;
-    basis: "aqi" | "exposure";
+    basis: "pm25" | "exposure";
     recommended_aqi: number | null;
+    recommended_pm25?: number | null;
+    fastest_pm25?: number | null;
     fastest_aqi: number | null;
     reduction_pct: number | null;
     extra_minutes: number;

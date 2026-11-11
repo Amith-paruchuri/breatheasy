@@ -477,16 +477,17 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const mins = c ? Math.round(c.extra_minutes) : 0;
   let headline = "";
   let subline = "";
-  if (c && c.basis === "aqi") {
+  if (c && c.basis === "pm25") {
     if (c.meaningful) {
       headline = mins > 0 ? `Cleaner air, ${mins} min longer` : "Cleaner air, no extra time";
-      subline = `Average AQI ${c.recommended_aqi} (${aqiLabel(c.recommended_aqi).toLowerCase()}) instead of ${c.fastest_aqi} on the fastest route.`;
+      subline = `Average PM2.5 ${c.recommended_pm25} µg/m³ instead of ${c.fastest_pm25} on the fastest route`;
+      subline += c.recommended_aqi != null ? ` (AQI ${c.recommended_aqi} vs ${c.fastest_aqi}).` : ".";
       if (rec?.via) subline += ` It goes via ${rec.via}.`;
     } else {
-      headline = c.fastest_aqi != null ? `Air is similar on every route` : "Fastest route";
+      headline = c.fastest_pm25 != null ? `Air is similar on every route` : "Fastest route";
       subline =
-        c.fastest_aqi != null
-          ? `Around AQI ${c.fastest_aqi} (${aqiLabel(c.fastest_aqi).toLowerCase()}) whichever way you go, so take the quickest.`
+        c.fastest_pm25 != null
+          ? `Around ${c.fastest_pm25} µg/m³ PM2.5 (AQI ${c.fastest_aqi}, ${aqiLabel(c.fastest_aqi).toLowerCase()}) whichever way you go, so take the quickest.`
           : c.message;
     }
   } else if (c) {
