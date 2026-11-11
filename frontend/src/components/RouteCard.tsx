@@ -263,7 +263,7 @@ export function RouteCard({
           </a>
           {details && (
             <p className="rcard-hint">
-              Google Maps follows these same streets. Its time can differ by a few minutes because it uses live traffic.
+              Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.
               {navigateHint ? ` ${navigateHint}` : ""}
             </p>
           )}

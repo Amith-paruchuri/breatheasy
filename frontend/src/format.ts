@@ -101,41 +101,66 @@ function distToLine(p: LatLng, line: LatLng[]): number {
 
 const DEVIATE_M: Record<TravelMode, number> = { WALK: 40, BICYCLE: 60, TWO_WHEELER: 90, DRIVE: 90 };
 
+/** Google Maps accepts 3 stops in a phone browser, up to 9 elsewhere (we use 8). */
+function maxWaypoints(): number {
+  if (typeof navigator === "undefined") return 3;
+  const phone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  return phone ? 3 : 8;
+}
+
 /**
- * Points that make Google Maps follow this route rather than its own fastest one.
- * Where the route leaves the fastest route, we pin the point that strays furthest
- * (a vertex of our own path, so it sits on a road). Google Maps accepts up to 3
- * waypoints on phones, so the 3 biggest departures are kept, in travel order.
+ * Points that make Google Maps follow this route rather than its own choice.
+ * The route is cut into equal stretches, one pin per stretch, so the whole trip is
+ * held in place (not just the part that differs from the fastest route). Within a
+ * stretch, the pin goes where our path strays furthest from the fastest route, which
+ * is where Google would otherwise cut across; if it doesn't stray, the stretch's
+ * midpoint is used. Pins are vertices of our own path, so they sit on a road.
  */
-export function routeWaypoints(route: RouteOut, fastest: RouteOut | null, mode: TravelMode): LatLng[] {
-  if (!fastest || fastest.id === route.id) return [];
+export function routeWaypoints(
+  route: RouteOut,
+  fastest: RouteOut | null,
+  mode: TravelMode,
+  max: number = maxWaypoints(),
+): LatLng[] {
   const path = route.segments.flatMap((s) => s.path);
-  const base = fastest.segments.flatMap((s) => s.path);
-  if (path.length < 3 || base.length < 2) return [];
+  if (path.length < 3 || max < 1) return [];
+  const base = fastest && fastest.id !== route.id ? fastest.segments.flatMap((s) => s.path) : [];
   const thr = DEVIATE_M[mode];
-  const total = path.reduce((a, p, i) => (i ? a + distM(path[i - 1], p) : 0), 0);
-  // keep waypoints off the very start and end, where Google snaps the trip anyway
-  const edge = Math.min(150, total * 0.05);
-  let along = 0;
-  const runs: { idx: number; d: number }[] = [];
-  let cur: { idx: number; d: number } | null = null;
-  for (let i = 0; i < path.length; i++) {
-    const p = path[i];
-    if (i) along += distM(path[i - 1], p);
-    const d = along < edge || total - along < edge ? 0 : distToLine(p, base);
-    if (d > thr) {
-      if (!cur || d > cur.d) cur = { idx: i, d };
-    } else if (cur) {
-      runs.push(cur);
-      cur = null;
+  const cum: number[] = [0];
+  for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + distM(path[i - 1], path[i]));
+  const total = cum[cum.length - 1];
+  if (total < 800) return []; // short trips: Google takes the same way anyway
+  // ~one pin per 1.5 km, never more than the platform allows
+  const n = Math.max(1, Math.min(max, Math.round(total / 1500)));
+  const edge = Math.min(250, total * 0.05); // keep pins off the very start and end
+  const out: LatLng[] = [];
+  for (let k = 0; k < n; k++) {
+    const lo = Math.max(edge, (total * k) / n);
+    const hi = Math.min(total - edge, (total * (k + 1)) / n);
+    const mid = (lo + hi) / 2;
+    let pick = -1;
+    let bestDev = thr;
+    let bestMid = Infinity;
+    let midIdx = -1;
+    for (let i = 1; i < path.length - 1; i++) {
+      if (cum[i] < lo || cum[i] > hi) continue;
+      if (base.length > 1) {
+        const d = distToLine(path[i], base);
+        if (d > bestDev) {
+          bestDev = d;
+          pick = i;
+        }
+      }
+      const m = Math.abs(cum[i] - mid);
+      if (m < bestMid) {
+        bestMid = m;
+        midIdx = i;
+      }
     }
+    const idx = pick >= 0 ? pick : midIdx;
+    if (idx >= 0) out.push(path[idx]);
   }
-  if (cur) runs.push(cur);
-  return runs
-    .sort((a, b) => b.d - a.d)
-    .slice(0, 3)
-    .sort((a, b) => a.idx - b.idx)
-    .map((r) => path[r.idx]);
+  return out;
 }
 
 /** Hand the chosen route to Google Maps, pinned so it follows the same streets. */
