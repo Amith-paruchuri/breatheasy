@@ -3,7 +3,7 @@
  * - Hashed build assets (/assets/*): cache-first (file names change on every build).
  * - /api/* and other origins (maps, tiles, sign-in): never touched, always live.
  */
-const VERSION = "br-v1";
+const VERSION = "br-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

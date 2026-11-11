@@ -1,9 +1,7 @@
 import { useState } from "react";
 import {
-  aqiColor,
   pm25Color,
   PM25_SAFE_LIMIT,
-  aqiInk,
   aqiLabel,
   fmtDistance,
   fmtDuration,
@@ -89,16 +87,21 @@ export function RouteCard({
 }: Props) {
   const [showDetails, setShowDetails] = useState(false);
   const details = !compact || showDetails;
-  const d = route.delta_aqi;
+  // PM2.5 leads: it differs far more between streets than the AQI number does.
+  const pm = route.mean_pm25 != null ? Math.round(route.mean_pm25) : null;
+  const d =
+    route.mean_pm25 != null && fastestRoute?.mean_pm25 != null
+      ? Math.round(route.mean_pm25 - fastestRoute.mean_pm25)
+      : null;
   const compare = fastest
     ? "Fastest route"
     : d == null
       ? "Air quality unknown"
-      : Math.abs(d) < 3
+      : Math.abs(d) < 2
         ? "Similar air to the fastest route"
         : d < 0
-          ? `AQI ${Math.abs(d)} lower than the fastest route`
-          : `AQI ${d} higher than the fastest route`;
+          ? `${Math.abs(d)} µg/m³ less PM2.5 than the fastest route`
+          : `${d} µg/m³ more PM2.5 than the fastest route`;
   const pms = route.segments.map((x) => x.pm25).filter((v): v is number => v != null);
   const lo = pms.length ? Math.round(Math.min(...pms)) : null;
   const hi = pms.length ? Math.round(Math.max(...pms)) : null;
@@ -109,7 +112,7 @@ export function RouteCard({
     route.delta_exposure_pct != null &&
     route.delta_exposure_pct > 5 &&
     d != null &&
-    d < -2;
+    d < -1;
 
   return (
     <article
@@ -161,25 +164,25 @@ export function RouteCard({
           )}
         </div>
         <div
-          className="aqi-chip"
+          className="aqi-chip pm-chip"
           style={{
-            background: aqiColor(route.mean_aqi),
-            color: aqiInk(route.mean_aqi),
+            background: pm25Color(route.mean_pm25),
+            color: pm != null && pm > 120 ? "#fff" : "#1b1b1b",
           }}
-          aria-label={`Average AQI ${route.mean_aqi ?? "unknown"}, ${aqiLabel(route.mean_aqi)}`}
+          aria-label={`Average PM2.5 ${pm ?? "unknown"} micrograms per cubic metre; AQI ${route.mean_aqi ?? "unknown"}`}
         >
-          <b>{route.mean_aqi ?? "–"}</b>
-          <span>{compact ? aqiLabel(route.mean_aqi) : "AQI"}</span>
+          <b>{pm ?? "–"}</b>
+          <span>PM2.5</span>
         </div>
       </div>
 
       <p
-        className={`rcard-compare${d != null && d <= -3 ? " better" : d != null && d >= 3 ? " worse" : ""}`}
+        className={`rcard-compare${d != null && d <= -2 ? " better" : d != null && d >= 2 ? " worse" : ""}`}
       >
         {compare}
-        {!compact && (
+        {(
           <span className="rcard-cat">
-            Average air: {aqiLabel(route.mean_aqi).toLowerCase()}
+            Average AQI {route.mean_aqi ?? "–"} ({aqiLabel(route.mean_aqi).toLowerCase()})
           </span>
         )}
       </p>
@@ -218,14 +221,14 @@ export function RouteCard({
           <div>
             <dt>Worst stretch</dt>
             <dd>
-              AQI {route.peak_aqi ?? "–"}{" "}
-              <span>{aqiLabel(route.peak_aqi)}</span>
+              {route.peak_pm25 != null ? Math.round(route.peak_pm25) : "–"} µg/m³{" "}
+              <span>AQI {route.peak_aqi ?? "–"}, {aqiLabel(route.peak_aqi).toLowerCase()}</span>
             </dd>
           </div>
           <div>
             <dt>Average PM2.5</dt>
             <dd>
-              {route.mean_pm25 ?? "–"} µg/m³ <span>Fine particles</span>
+              {pm ?? "–"} µg/m³ <span>AQI {route.mean_aqi ?? "–"}</span>
             </dd>
           </div>
         </dl>
