@@ -219,8 +219,6 @@ async def run_agent(
     via = f" via {best_route.via}" if best_route.via else ""
     verdict = f"Leave at {best_dep.strftime('%H:%M')}{via}; you'll arrive around {arrival_time.strftime('%H:%M')}.{reduction}"
 
-    if sensitive and best_route.mean_pm25 and best_route.mean_pm25 > 60:
-        verdict += " Since the air is very poor, please wear an N95 mask and keep your reliever medicine handy."
 
     best_plan.recommended_id = best_route.id
     best_plan.usage = usage
