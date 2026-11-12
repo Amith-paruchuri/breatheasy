@@ -85,7 +85,7 @@ export function TripSettings(p: SettingsProps) {
         <input type="checkbox" checked={p.sensitive} onChange={(e) => p.onSensitive(e.target.checked)} />
         <span>
           <b>I'm sensitive to pollution</b>
-          <small>Asthma, pregnancy, older age, or travelling with children: stays further from busy roads and pollution spots, and reminds you about masks sooner.</small>
+          <small>Asthma, pregnancy, older age, or travelling with children: stays further from busy roads and pollution spots.</small>
         </span>
       </label>
 

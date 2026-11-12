@@ -560,19 +560,6 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           <p className="verdict-sub">{subline}</p>
         </>
       )}
-      {rec?.mean_pm25 != null && rec.mean_pm25 > (sensitive ? 60 : 90) && (
-        <p className="mask-tip">
-          <Icon name="alert" size={16} />
-          <span>
-            {sensitive
-              ? "The air is above India's safe limit on this trip. Wear a well-fitted N95 mask, and carry your inhaler if you use one."
-              : "Very poor air on this trip. A well-fitted N95 mask cuts what you breathe in far more than any route change."}
-          </span>
-        </p>
-      )}
-      {c && c.meaningful && c.shared_cells_pct != null && c.shared_cells_pct > 60 && (
-        <p className="verdict-sub">These routes share most of their air-quality areas, so treat the difference as approximate.</p>
-      )}
     </div>
   );
 
