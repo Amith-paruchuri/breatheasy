@@ -63,6 +63,11 @@ body,
   height: 100%;
   margin: 0;
 }
+/* The app is a fixed screen (map + sheet); the page itself must never scroll. */
+html,
+body {
+  overflow: hidden;
+}
 body {
   background: var(--haze);
   color: var(--ink);

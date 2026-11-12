@@ -392,8 +392,17 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   function select(id: string) {
     setSelectedId(id);
     if (!desktop) {
-      const el = carousel.current?.querySelector<HTMLElement>(`[data-route="${id}"]`);
-      el?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+      // Scroll only the card row. scrollIntoView also scrolls every scrollable parent,
+      // and on iPhone that slid the whole page up: the search bar vanished and a blank
+      // band appeared at the bottom.
+      const row = carousel.current;
+      const el = row?.querySelector<HTMLElement>(`[data-route="${id}"]`);
+      if (row && el) {
+        const pad = parseFloat(getComputedStyle(row).paddingLeft) || 0;
+        const left = row.scrollLeft + el.getBoundingClientRect().left - row.getBoundingClientRect().left - pad;
+        row.scrollTo({ left, behavior: "smooth" });
+      }
+      if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0);
     }
   }
 
