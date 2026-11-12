@@ -201,3 +201,17 @@ export function postEvent(event: "maps_open" | "share" | "shared_open", at?: Lat
     /* ignore */
   }
 }
+
+export interface BestTimeResult {
+  slots: { offset_min: number; depart: string; mean_pm25: number | null }[];
+  best_offset_min: number | null;
+  cleaner_pct: number | null;
+  source: string | null;
+}
+
+export function bestTime(
+  body: { mode: string; points: { lat: number; lng: number; offset_s: number; duration_s: number }[] },
+  signal?: AbortSignal,
+): Promise<BestTimeResult> {
+  return req<BestTimeResult>("/api/best-time", { ...json("POST", body), signal });
+}

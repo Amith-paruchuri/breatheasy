@@ -57,6 +57,9 @@ trips = sa.Table(
     sa.Column("differs", sa.Boolean, nullable=False),  # recommended route is not the fastest
     sa.Column("fidelity3", sa.Float),  # share of Google's path on our route, 3 pins (phone)
     sa.Column("fidelity8", sa.Float),  # same with up to 8 pins (computer)
+    sa.Column("now_pm25", sa.Float),  # recommended route, leaving now (best-time basis)
+    sa.Column("best_time_pm25", sa.Float),  # same route at the best departure in the next 2 h
+    sa.Column("best_offset_min", sa.Integer),
 )
 
 # Well-known places: (name, lat, lng). Coordinates are approximate; routing snaps to roads.
@@ -246,6 +249,18 @@ async def run_benchmark(app, n: int) -> dict:
                 except Exception as e:
                     log.warning("fidelity check failed: %s", e)
                     fid[pins] = None
+            bt = None
+            try:
+                from .besttime import best_time, points_from_route
+
+                bt, bu = await best_time(points_from_route(rec), aq)
+                usage_total.aq_forecast_calls += bu.aq_forecast_calls
+                usage_total.aq_current_calls += bu.aq_current_calls
+            except Exception as e:
+                log.warning("best-time check failed: %s", e)
+            best_slot = None
+            if bt and bt.best_offset_min is not None:
+                best_slot = next(x for x in bt.slots if x.offset_min == bt.best_offset_min)
             g_f, r_f = _context_min(fast)
             g_c, r_c = _context_min(rec)
             return {
@@ -257,6 +272,9 @@ async def run_benchmark(app, n: int) -> dict:
                 "chosen_road_min": r_c, "fastest_road_min": r_f, "differs": rec.id != fast.id,
                 "fidelity3": None if fid[3] is None else round(fid[3], 3),
                 "fidelity8": None if fid[8] is None else round(fid[8], 3),
+                "now_pm25": bt.slots[0].mean_pm25 if bt else None,
+                "best_time_pm25": best_slot.mean_pm25 if best_slot else None,
+                "best_offset_min": best_slot.offset_min if best_slot else None,
             }
 
     rows = [r for r in await asyncio.gather(*(one(*t) for t in pick_trips(n))) if r]
@@ -267,7 +285,8 @@ async def run_benchmark(app, n: int) -> dict:
         await app.state.spend.record(usage_total, None, search=False)
     except Exception:
         log.exception("could not record benchmark spend")
-    return {"trips": len(rows), "routes_calls": usage_total.routes_calls, "aq_calls": usage_total.aq_current_calls}
+    return {"trips": len(rows), "routes_calls": usage_total.routes_calls,
+            "aq_calls": usage_total.aq_current_calls + usage_total.aq_forecast_calls}
 
 
 def summarize_trips(rows: list[dict]) -> dict:
@@ -282,6 +301,8 @@ def summarize_trips(rows: list[dict]) -> dict:
     road_saved = [r["fastest_road_min"] - r["chosen_road_min"] for r in diff]
     f3 = [r["fidelity3"] for r in rows if r["fidelity3"] is not None]
     f8 = [r["fidelity8"] for r in rows if r["fidelity8"] is not None]
+    bt = [r for r in rows if r.get("now_pm25") and r.get("best_time_pm25") is not None]
+    bt_pct = [100 * (r["now_pm25"] - r["best_time_pm25"]) / r["now_pm25"] for r in bt]
     by_city: dict[str, dict] = {}
     for c in sorted({r["city"] for r in rows}):
         cr = [r for r in rows if r["city"] == c]
@@ -291,6 +312,8 @@ def summarize_trips(rows: list[dict]) -> dict:
             "cleaner_found_pct": round(100 * len(cd) / len(cr), 0),
             "median_cleaner_pct": med([100 * (r["fastest_pm25"] - r["chosen_pm25"]) / r["fastest_pm25"] for r in cd]),
             "median_extra_min": med([r["chosen_min"] - r["fastest_min"] for r in cd]),
+            "median_best_time_pct": med([100 * (r["now_pm25"] - r["best_time_pm25"]) / r["now_pm25"]
+                                         for r in cr if r.get("now_pm25") and r.get("best_time_pm25") is not None]),
         }
     return {
         "trips": len(rows),
@@ -305,6 +328,10 @@ def summarize_trips(rows: list[dict]) -> dict:
         "fidelity_phone_median_pct": med([100 * x for x in f3]),
         "fidelity_computer_median_pct": med([100 * x for x in f8]),
         "fidelity_computer_90_pct": round(100 * sum(1 for x in f8 if x >= 0.9) / len(f8), 1) if f8 else None,
+        "best_time_trips": len(bt),
+        "best_time_median_pct": med(bt_pct),
+        "best_time_10pct_share": round(100 * sum(1 for x in bt_pct if x >= 10) / len(bt_pct), 1) if bt_pct else None,
+        "best_time_max_pct": round(max(bt_pct), 1) if bt_pct else None,
         "by_city": by_city,
     }
 

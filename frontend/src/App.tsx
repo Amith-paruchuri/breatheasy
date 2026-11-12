@@ -14,6 +14,7 @@ import { ModePicker, TripSettings, settingsSummary } from "./components/TripCont
 import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, badAirBand, fmtTime, googleMapsUrl } from "./format";
 import { useIsDesktop, useOnline } from "./hooks";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
+import { BestTime } from "./components/BestTime";
 import { StatsPage, ValidationPage } from "./pages/Evidence";
 import type { AppConfig, Place, Preference, RouteOut, RouteResponse, TravelMode } from "./types";
 
@@ -580,6 +581,24 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     </div>
   );
 
+  // Best time to leave: only when leaving now (a later departure is already chosen otherwise).
+  const pickDeparture = (offsetMin: number) => {
+    const d = new Date(Date.now() + offsetMin * 60000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setDeparture(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setLeaveLater(true);
+  };
+  const btRoute = result?.routes.find((r) => r.id === selectedId) ?? rec;
+  const bestTimeEl =
+    result && !leaveLater && !verdictOverride ? (
+      <BestTime
+        route={btRoute}
+        mode={(agentMode ?? mode) as TravelMode}
+        cacheKey={`${result.routes.map((r) => r.id).join(",")}|${result.fastest_id}`}
+        onPick={pickDeparture}
+      />
+    ) : null;
+
   const shareRoute = async (r: RouteOut, fast: RouteOut | null) => {
     const o = origin?.location ?? r.segments[0]?.path[0];
     const d = destination?.location ?? r.segments[r.segments.length - 1]?.path.slice(-1)[0];
@@ -813,6 +832,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           {emptyState}
           {loadingState}
           {verdict}
+          {bestTimeEl}
           {cards}
           {warnings}
           {footer}
@@ -885,6 +905,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
               {emptyState}
               {loadingState}
               {verdict}
+              {bestTimeEl}
               {cards}
               {warnings}
               {result ? (

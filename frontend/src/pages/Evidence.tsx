@@ -33,6 +33,10 @@ interface Bench {
   fidelity_phone_median_pct?: number | null;
   fidelity_computer_median_pct?: number | null;
   fidelity_computer_90_pct?: number | null;
+  best_time_trips?: number;
+  best_time_median_pct?: number | null;
+  best_time_10pct_share?: number | null;
+  best_time_max_pct?: number | null;
   by_city?: Record<string, { trips: number; cleaner_found_pct: number; median_cleaner_pct: number | null; median_extra_min: number | null }>;
 }
 
@@ -59,6 +63,29 @@ function BenchSection({ b }: { b: Bench }) {
           <span>less beside busy main roads (median, where street data exists)</span>
         </div>
       </div>
+      {b.best_time_trips != null && b.best_time_trips > 0 && (
+        <>
+          <h2>When you leave matters too</h2>
+          <p>
+            For the same trips, the recommended route is also checked leaving now and in 30, 60, 90 and 120 minutes,
+            using the hourly forecast. This is the "Best time to leave" row in the app.
+          </p>
+          <div className="ev-tiles">
+            <div>
+              <b>{n(b.best_time_median_pct, "%")}</b>
+              <span>cleaner air by leaving at the best time in the next 2 hours (median)</span>
+            </div>
+            <div>
+              <b>{n(b.best_time_10pct_share, "%")}</b>
+              <span>of trips get at least 10% cleaner air by waiting up to 2 hours</span>
+            </div>
+            <div>
+              <b>{n(b.best_time_max_pct, "%")}</b>
+              <span>largest gain seen</span>
+            </div>
+          </div>
+        </>
+      )}
       <h2>Does Google Maps follow the chosen route?</h2>
       <p>
         "Start in Google Maps" sends the route with pins along it. We send the same pins to Google's routing service and

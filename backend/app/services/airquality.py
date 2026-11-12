@@ -74,6 +74,7 @@ class AQService:
         usage: Usage,
         scale: int = 1,
         force_open: bool = False,
+        current_window_min: int | None = None,
     ) -> list[AQReading | None]:
         """queries: (lat, lng, expected arrival time). Returns readings in the same order.
 
@@ -86,7 +87,7 @@ class AQService:
         if not hasattr(p, "secondary"):
             usage.aq_source = self.s.provider
             try:
-                return await asyncio.wait_for(self._lookup(p, self.s.provider, queries, now, usage, scale), deadline)
+                return await asyncio.wait_for(self._lookup(p, self.s.provider, queries, now, usage, scale, current_window_min), deadline)
             except asyncio.TimeoutError:
                 raise ProviderError(
                     "Checking air quality on this trip took too long. Try again, or pick a closer destination.",
@@ -95,7 +96,7 @@ class AQService:
                 ) from None
         if p.breaker.ok() and not force_open:
             try:
-                out = await asyncio.wait_for(self._lookup(p.primary, "google", queries, now, usage, scale), deadline)
+                out = await asyncio.wait_for(self._lookup(p.primary, "google", queries, now, usage, scale, current_window_min), deadline)
                 usage.aq_source = "google"
                 return out
             except asyncio.TimeoutError:
@@ -105,7 +106,7 @@ class AQService:
                 p.breaker.record(exc)
                 log.warning("google air quality failed, using open data: %s (status %s)", exc, exc.status)
         scratch = Usage()
-        out = await self._lookup(p.secondary, "open", queries, now, scratch, scale)
+        out = await self._lookup(p.secondary, "open", queries, now, scratch, scale, current_window_min)
         usage.open_calls += scratch.aq_current_calls + scratch.aq_forecast_calls
         usage.aq_cache_hits += scratch.aq_cache_hits
         usage.aq_source = "open"
@@ -113,10 +114,12 @@ class AQService:
         return out
 
     async def _lookup(
-        self, prov, tag: str, queries: list[tuple[float, float, datetime]], now: datetime, usage: Usage, scale: int = 1
+        self, prov, tag: str, queries: list[tuple[float, float, datetime]], now: datetime, usage: Usage, scale: int = 1,
+        current_window_min: int | None = None,
     ) -> list[AQReading | None]:
         tag = f"{tag}@{scale}"
-        current_until = now + timedelta(minutes=self.s.current_window_min)
+        window = self.s.current_window_min if current_window_min is None else current_window_min
+        current_until = now + timedelta(minutes=window)
         now_hour = hour_floor(now)
         horizon = now_hour + timedelta(hours=self.s.forecast_horizon_h)
         keys: list[tuple] = []
