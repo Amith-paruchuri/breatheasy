@@ -86,13 +86,21 @@ def city_group(city: str, state: str = "") -> str:
 
 
 async def fetch_stations(http: httpx.AsyncClient, api_key: str) -> list[dict]:
-    """Latest PM2.5 (24-hour average) for every CPCB station on data.gov.in."""
-    out, offset = [], 0
+    """Latest PM2.5 (24-hour average) for every CPCB station on data.gov.in.
+
+    data.gov.in's gateway often answers 502/504 for large pages, so pages are small
+    (100 records) and each is retried a few times with a short pause."""
+    out, offset, page = [], 0, 100
     while offset < 5000:
-        r = await http.get(DATAGOV_URL, params={
-            "api-key": api_key, "format": "json", "limit": 500, "offset": offset,
-            "filters[pollutant_id]": "PM2.5",
-        })
+        r = None
+        for attempt in range(4):
+            r = await http.get(DATAGOV_URL, params={
+                "api-key": api_key, "format": "json", "limit": page, "offset": offset,
+                "filters[pollutant_id]": "PM2.5",
+            })
+            if r.status_code < 500:
+                break
+            await asyncio.sleep(2 + 3 * attempt)
         r.raise_for_status()
         recs = r.json().get("records", []) or []
         for x in recs:
@@ -103,9 +111,9 @@ async def fetch_stations(http: httpx.AsyncClient, api_key: str) -> list[dict]:
             out.append({"station": x.get("station", "")[:200], "city": (x.get("city") or "")[:100],
                         "state": (x.get("state") or "")[:100], "lat": lat, "lng": lng, "pm25": pm,
                         "updated": str(x.get("last_update") or "")[:40]})
-        if len(recs) < 500:
+        if len(recs) < page:
             break
-        offset += 500
+        offset += page
     return out
 
 

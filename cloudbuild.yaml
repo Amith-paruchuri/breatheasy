@@ -63,8 +63,9 @@ steps:
   # Adds any city still missing from the layer (Delhi-NCR, Mumbai, Kolkata, Bengaluru,
   # Hyderabad); cities already built are kept, so normally this takes seconds. Saved
   # after every city, so a slow map server only delays the rest to the next deploy.
+  # (Runs in a Python image: the Cloud SDK image has no python3.)
   - id: map-layer-finish
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    name: python:3.12-slim
     entrypoint: bash
     args:
       - -c
@@ -76,9 +77,20 @@ steps:
         rm -f backend/app/data/*.tmp
         [ -f $$OUT ] || { echo "WARNING: map layer unavailable; deploying without park and road context"; exit 0; }
         AFTER=$$(md5sum $$OUT | cut -c1-32)
-        if [ "$$BEFORE" != "$$AFTER" ]; then
-          gcloud storage cp $$OUT gs://${_DATA_BUCKET}/environment.json.gz && echo "Saved the updated map layer for future deploys"
+        [ "$$BEFORE" != "$$AFTER" ] && touch /workspace/.map_changed
+        true
+
+  - id: map-layer-save
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ -f /workspace/.map_changed ]; then
+          gcloud storage cp backend/app/data/environment.json.gz gs://${_DATA_BUCKET}/environment.json.gz \
+            && echo "Saved the updated map layer for future deploys"
         fi
+        true
 
   - id: build
     name: gcr.io/cloud-builders/docker
