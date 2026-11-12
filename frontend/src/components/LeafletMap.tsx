@@ -64,14 +64,16 @@ export function LeafletMap({ routes, selectedId, onSelect, origin, destination, 
           .addTo(g);
       }
       for (const h of sel.hotspots) {
-        L.circle([h.location.lat, h.location.lng], {
-          radius: 180,
-          color: "#8e1f3d",
-          weight: 2,
-          fillColor: "#d9452f",
-          fillOpacity: 0.18,
+        L.marker([h.location.lat, h.location.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div class="spot-marker"><span>!</span>${Math.round(h.pm25)}</div>`,
+            iconSize: [56, 26],
+            iconAnchor: [28, 13],
+          }),
+          zIndexOffset: 500,
         })
-          .bindTooltip(`Hotspot: PM2.5 ${h.pm25} µg/m³`)
+          .bindTooltip(`Pollution spot: PM2.5 ${Math.round(h.pm25)} µg/m³`)
           .addTo(g);
       }
     }

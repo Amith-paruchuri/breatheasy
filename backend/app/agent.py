@@ -133,6 +133,7 @@ async def run_agent(
 
     now = datetime.now(IST)
     route_departure = now
+    sensitive = bool(parsed["conditions"]) or req.sensitive
     # Use a consistent time budget for all trials to ensure candidate reuse
     agent_max_extra = s.cleanest_air_default_extra_minutes
     base_req = RouteRequest(
@@ -141,6 +142,7 @@ async def run_agent(
         mode=parsed["mode"],
         preference=Preference.FASTEST,
         max_extra_minutes=agent_max_extra,
+        sensitive=sensitive,
     )
     # Get baseline fastest route to estimate duration and for comparison
     base_resp = await plan_routes(base_req, providers, aq, s, env, force_open=force_open, route_departure=route_departure)
@@ -172,9 +174,10 @@ async def run_agent(
             origin=origin_ll,
             destination=dest_ll,
             mode=parsed["mode"],
-            preference=Preference.CLEANEST,
+            preference=Preference.CLEANEST_AIR,
             departure_time=dep,
             max_extra_minutes=agent_max_extra,
+            sensitive=sensitive,
         )
         return dep, await plan_routes(r, providers, aq, s, env, force_open=force_open, route_departure=route_departure)
 
@@ -194,8 +197,8 @@ async def run_agent(
             arrival = dep + timedelta(seconds=r.duration_s)
             if arrive_by and arrival > arrive_by + timedelta(minutes=2):
                 continue
-            if r.exposure_pm25 is not None and r.exposure_pm25 < best_exposure:
-                best_exposure = r.exposure_pm25
+            if r.mean_pm25 is not None and r.mean_pm25 < best_exposure:
+                best_exposure = r.mean_pm25
                 best_dep, best_route, best_plan = dep, r, p
 
     if not best_route:
@@ -204,11 +207,11 @@ async def run_agent(
 
     arrival_time = best_dep + timedelta(seconds=best_route.duration_s)
     reduction = ""
-    if best_route.exposure_pm25 and baseline_route.exposure_pm25:
-        pct = round((baseline_route.exposure_pm25 - best_route.exposure_pm25) / baseline_route.exposure_pm25 * 100)
+    if best_route.mean_pm25 and baseline_route.mean_pm25:
+        pct = round((baseline_route.mean_pm25 - best_route.mean_pm25) / baseline_route.mean_pm25 * 100)
         if pct > 0:
             reduction = (
-                f" That's {pct}% less PM2.5 than the fastest route leaving at "
+                f" That's {pct}% cleaner air than the fastest route leaving at "
                 f"{baseline_dep.strftime('%H:%M')} (average {round(best_route.mean_pm25)} vs "
                 f"{round(baseline_route.mean_pm25)} \u00b5g/m\u00b3)."
             )
@@ -216,7 +219,7 @@ async def run_agent(
     via = f" via {best_route.via}" if best_route.via else ""
     verdict = f"Leave at {best_dep.strftime('%H:%M')}{via}; you'll arrive around {arrival_time.strftime('%H:%M')}.{reduction}"
 
-    if any(c in parsed["conditions"] for c in HEALTH_CONDITIONS) and best_route.mean_pm25 > 200:
+    if sensitive and best_route.mean_pm25 and best_route.mean_pm25 > 60:
         verdict += " Since the air is very poor, please wear an N95 mask and keep your reliever medicine handy."
 
     best_plan.recommended_id = best_route.id

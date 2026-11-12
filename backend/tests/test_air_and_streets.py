@@ -219,3 +219,17 @@ def test_simplify_keeps_closed_rings():
     ring = [(28.59, 77.215), (28.59, 77.222), (28.596, 77.222), (28.596, 77.215), (28.59, 77.215)]
     out = b.simplify(ring, 10.0, xy)
     assert len(out) == 5 and out[0] == out[-1]
+
+
+def test_sensitive_mode_avoids_busy_roads_and_peaks():
+    from app.services.ranking import Scored, pick
+    from app.models import Preference
+    fast = Scored("fast", 1800, 3000.0, set(), mean_aqi=200, mean_pm25=100)
+    road = Scored("road", 1900, 3000.0, set(), mean_aqi=195, mean_pm25=92, penalty=12)  # cleaner on average, but busy road
+    park = Scored("park", 2100, 3200.0, set(), mean_aqi=198, mean_pm25=95, penalty=1)
+    rec, _, _ = pick([fast, road, park], Preference.CLEANEST_AIR, 45, 1.5, 10, 2)
+    assert rec == "park"
+    # without the penalty the busy-road route would win
+    road.penalty = park.penalty = 0
+    rec, _, _ = pick([fast, road, park], Preference.CLEANEST_AIR, 45, 1.5, 10, 2)
+    assert rec == "road"

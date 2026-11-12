@@ -34,6 +34,8 @@ class RouteRequest(BaseModel):
     preference: Preference = Preference.BALANCED
     max_extra_minutes: float | None = Field(default=None, ge=0, le=180)
     departure_time: datetime | None = None  # naive values are read as Asia/Kolkata
+    # Asthma, pregnancy, elderly, children: avoid busy roads and peaks more, smaller gains count.
+    sensitive: bool = False
     explore_detours: bool = True
 
 
@@ -156,6 +158,7 @@ class RouteResponse(BaseModel):
 class AgentRequest(BaseModel):
     query: str
     origin: LatLng
+    sensitive: bool = False
 
 
 class AgentResponse(BaseModel):

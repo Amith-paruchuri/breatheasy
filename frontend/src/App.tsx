@@ -112,7 +112,33 @@ function Legend({ explain = false }: { explain?: boolean }) {
   );
 }
 
-function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
+
+/** A trip opened from a shared link: ?from=lat,lng&fl=label&to=lat,lng&tl=label&m=WALK&p=cleanest_air */
+function readSharedTrip(): { origin: Place; destination: Place; mode?: TravelMode; pref?: string } | null {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const ll = (v: string | null) => {
+      const [lat, lng] = (v ?? "").split(",").map(Number);
+      return Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : null;
+    };
+    const o = ll(q.get("from"));
+    const d = ll(q.get("to"));
+    if (!o || !d) return null;
+    const modes = ["WALK", "BICYCLE", "TWO_WHEELER", "DRIVE"];
+    const m = q.get("m");
+    const p = q.get("p");
+    return {
+      origin: { label: q.get("fl") || "Shared start", location: o },
+      destination: { label: q.get("tl") || "Shared destination", location: d },
+      mode: m && modes.includes(m) ? (m as TravelMode) : undefined,
+      pref: p && ["cleanest_air", "balanced", "fastest"].includes(p) ? p : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function AgentBox({ onPlan, sensitive }: { onPlan: (res: AgentResponse) => void; sensitive: boolean }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -134,7 +160,7 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           try {
-            const res = await runAgent({ query: q, origin: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, ctrl.signal);
+            const res = await runAgent({ query: q, origin: { lat: pos.coords.latitude, lng: pos.coords.longitude }, sensitive }, ctrl.signal);
             onPlan(res);
           } catch (e) {
             if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
@@ -145,7 +171,7 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
         async () => {
           // Fallback to Delhi center if geolocation is denied/fails
           try {
-            const res = await runAgent({ query: q, origin: { lat: 28.61, lng: 77.23 } }, ctrl.signal);
+            const res = await runAgent({ query: q, origin: { lat: 28.61, lng: 77.23 }, sensitive }, ctrl.signal);
             onPlan(res);
           } catch (e) {
             if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
@@ -156,7 +182,7 @@ function AgentBox({ onPlan }: { onPlan: (res: AgentResponse) => void }) {
         { timeout: 5000, maximumAge: 300000 },
       );
     },
-    [loading, onPlan],
+    [loading, onPlan, sensitive],
   );
 
   const startListening = () => {
@@ -208,12 +234,28 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const acct = useAccount();
   const online = useOnline();
   const desktop = useIsDesktop();
-  const [origin, setOrigin] = useState<Place | null>(null);
-  const [destination, setDestination] = useState<Place | null>(null);
-  const [mode, setMode] = useState<TravelMode>("WALK");
-  // Default: Balanced, which ranks on pollution dose (PM2.5 x minutes), the number the cards lead with.
-  const [preference, setPreferenceRaw] = useState<Preference>("balanced");
-  const [budget, setBudgetRaw] = useState(config.default_max_extra_minutes);
+  const [shared] = useState(readSharedTrip);
+  const [origin, setOrigin] = useState<Place | null>(shared?.origin ?? null);
+  const [destination, setDestination] = useState<Place | null>(shared?.destination ?? null);
+  const [mode, setMode] = useState<TravelMode>(shared?.mode ?? "WALK");
+  const [preference, setPreferenceRaw] = useState<Preference>(() => (shared?.pref as Preference) ?? "cleanest_air");
+  const [budget, setBudgetRaw] = useState(config.cleanest_air_default_extra_minutes);
+  const [sensitive, setSensitiveRaw] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("br.sensitive") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setSensitive = (b: boolean) => {
+    setSensitiveRaw(b);
+    try {
+      localStorage.setItem("br.sensitive", b ? "1" : "0");
+    } catch {
+      /* private mode */
+    }
+    if (b && preference !== "cleanest_air") setPreference("cleanest_air");
+  };
   const [budgetTouched, setBudgetTouched] = useState(false);
   const setBudget = (n: number) => {
     setBudgetTouched(true);
@@ -270,6 +312,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             preference,
             max_extra_minutes: budget,
             departure_time: leaveLater && departure ? departure : null,
+            sensitive,
           },
           ctrl.signal,
         );
@@ -291,7 +334,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       }
     }, 280);
     return () => clearTimeout(t);
-  }, [origin, destination, mode, preference, budget, leaveLater, departure, retry]);
+  }, [origin, destination, mode, preference, budget, leaveLater, departure, sensitive, retry]);
 
   const onAgentPlan = useCallback(
     (res: AgentResponse) => {
@@ -517,11 +560,57 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           <p className="verdict-sub">{subline}</p>
         </>
       )}
+      {rec?.mean_pm25 != null && rec.mean_pm25 > (sensitive ? 60 : 90) && (
+        <p className="mask-tip">
+          <Icon name="alert" size={16} />
+          <span>
+            {sensitive
+              ? "The air is above India's safe limit on this trip. Wear a well-fitted N95 mask, and carry your inhaler if you use one."
+              : "Very poor air on this trip. A well-fitted N95 mask cuts what you breathe in far more than any route change."}
+          </span>
+        </p>
+      )}
       {c && c.meaningful && c.shared_cells_pct != null && c.shared_cells_pct > 60 && (
         <p className="verdict-sub">These routes share most of their air-quality areas, so treat the difference as approximate.</p>
       )}
     </div>
   );
+
+  const shareRoute = async (r: RouteOut, fast: RouteOut | null) => {
+    const o = origin?.location ?? r.segments[0]?.path[0];
+    const d = destination?.location ?? r.segments[r.segments.length - 1]?.path.slice(-1)[0];
+    if (!o || !d) return;
+    const q = new URLSearchParams({
+      from: `${o.lat.toFixed(5)},${o.lng.toFixed(5)}`,
+      to: `${d.lat.toFixed(5)},${d.lng.toFixed(5)}`,
+      m: agentMode ?? mode,
+      p: preference,
+    });
+    if (origin?.label) q.set("fl", origin.label.split(",")[0]);
+    if (destination?.label) q.set("tl", destination.label.split(",")[0]);
+    const url = `${window.location.origin}/?${q.toString()}`;
+    const to = destination?.label?.split(",")[0] ?? "my destination";
+    const pm = r.mean_pm25 != null ? Math.round(r.mean_pm25) : null;
+    const fpm = fast?.mean_pm25 != null ? Math.round(fast.mean_pm25) : null;
+    let text = `My cleaner-air route to ${to}: ${Math.round(r.duration_s / 60)} min`;
+    if (pm != null) text += `, average PM2.5 ${pm} µg/m³`;
+    if (pm != null && fpm != null && fast && fast.id !== r.id && fpm > pm) text += ` (fastest route: ${fpm})`;
+    text += ". Plan yours on Breatheasy:";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Breatheasy route", text, url });
+        return;
+      }
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setToast("Link copied. Paste it in WhatsApp or anywhere.");
+    } catch {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener");
+    }
+  };
 
   const cards = result && (
     <div className={`cards${desktop ? "" : " carousel"}`} ref={carousel} key={resultKey}>
@@ -545,7 +634,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             onNavigate={() => onNavigate(r)}
             navigateHint={me ? (loggedRoutes.has(r.id) ? "Added to your trip log." : "We'll add this trip to your log.") : undefined}
             compact={!desktop}
-            maxExposure={Math.max(0, ...result.routes.map((x) => x.exposure_pm25 ?? 0)) || null}
+            onShare={() => shareRoute(r, fastestRoute)}
           />
         </div>
       ))}
@@ -612,7 +701,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         {result.data.oldest_observation && ` Current conditions as of ${fmtTime(result.data.oldest_observation)}.`}
         {result.data.uses_forecast && " Later parts of the trip use the hourly forecast."}
       </p>
-      <p>Exposure is PM2.5 multiplied by the minutes you spend in it: a way to compare routes, not medical advice.</p>
+      <p>Pollution spots are the stretches of a route with the highest PM2.5. Air-quality guidance here is general information, not medical advice.</p>
       <p>Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.</p>
       <details>
         <summary>Data sources and cost</summary>
@@ -679,6 +768,8 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       onLeaveLater={setLeaveLater}
       departure={departure}
       onDeparture={setDeparture}
+      sensitive={sensitive}
+      onSensitive={setSensitive}
     />
   );
 
@@ -704,7 +795,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           {accountButton}
         </header>
         {banners}
-        <AgentBox onPlan={onAgentPlan} />
+        <AgentBox onPlan={onAgentPlan} sensitive={sensitive} />
         {search}
         <ModePicker mode={mode} onMode={setMode} />
         {settings}
@@ -754,7 +845,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                   {accountButton}
                 </div>
               )}
-              <AgentBox onPlan={onAgentPlan} />
+              <AgentBox onPlan={onAgentPlan} sensitive={sensitive} />
               {search}
               {!searching && !tripSet && <ModePicker mode={mode} onMode={setMode} />}
             </>

@@ -14,8 +14,8 @@ export const ANY_TIME = 180; // minutes; "any extra time"
 
 export const PREFS: { id: Preference; label: string; hint: string }[] = [
   { id: "cleanest_air", label: "Cleanest air", hint: "The route with the cleanest air, even if it takes longer. Good for runs and unhurried walks." },
-  { id: "balanced", label: "Balanced", hint: "Takes a longer route only when it clearly cuts the pollution you breathe." },
-  { id: "fastest", label: "Fastest", hint: "The quickest route, with its exposure shown." },
+  { id: "balanced", label: "Balanced", hint: "Cleaner air, but only a few minutes out of your way." },
+  { id: "fastest", label: "Fastest", hint: "The quickest route, with its air quality shown." },
 ];
 
 export function ModePicker({ mode, onMode, compact = false }: { mode: TravelMode; onMode: (m: TravelMode) => void; compact?: boolean }) {
@@ -52,6 +52,8 @@ interface SettingsProps {
   onLeaveLater: (b: boolean) => void;
   departure: string;
   onDeparture: (s: string) => void;
+  sensitive: boolean;
+  onSensitive: (b: boolean) => void;
 }
 
 export function TripSettings(p: SettingsProps) {
@@ -78,6 +80,14 @@ export function TripSettings(p: SettingsProps) {
         ))}
       </div>
       <p className="pref-hint">{PREFS.find((x) => x.id === p.preference)?.hint}</p>
+
+      <label className="toggle sensitive-toggle">
+        <input type="checkbox" checked={p.sensitive} onChange={(e) => p.onSensitive(e.target.checked)} />
+        <span>
+          <b>I'm sensitive to pollution</b>
+          <small>Asthma, pregnancy, older age, or travelling with children: stays further from busy roads and pollution spots, and reminds you about masks sooner.</small>
+        </span>
+      </label>
 
       <div className="setting-chips">
         <button

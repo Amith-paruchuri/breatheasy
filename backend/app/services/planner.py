@@ -154,6 +154,12 @@ async def plan_routes(
     if departure < now - timedelta(minutes=5):
         departure = now
         warnings.append("Departure time was in the past; planned for now instead.")
+    # Ranking is on average PM2.5 (how clean the air is), not dose: dose (PM2.5 x minutes)
+    # is dominated by trip length, so it nearly always picks the fastest route.
+    # Balanced = the same ranking with a smaller default time allowance.
+    rank_pref = req.preference
+    if req.preference == Preference.BALANCED or (req.sensitive and req.preference != Preference.FASTEST):
+        rank_pref = Preference.CLEANEST_AIR
     if req.max_extra_minutes is not None:
         max_extra = req.max_extra_minutes
     elif req.preference == Preference.CLEANEST_AIR:
@@ -278,10 +284,16 @@ async def plan_routes(
                 hotspots=hotspots,
             )
         )
-        scored.append(Scored(rid, cand.route.duration_s, ex.exposure_pm25, cells, mean_aqi, ex.mean_pm25))
+        penalty = 0.0
+        if req.sensitive and ex.mean_pm25 is not None:
+            tot = sum(sg.duration_s for sg in segs) or 1
+            busy = sum(sg.duration_s * (c.frac_road if c else 0) for sg, c in zip(segs, seg_ctx)) / tot
+            penalty = 15 * busy + 0.2 * max(0.0, (ex.peak_pm25 or ex.mean_pm25) - ex.mean_pm25)
+        scored.append(Scored(rid, cand.route.duration_s, ex.exposure_pm25, cells, mean_aqi, ex.mean_pm25, penalty))
 
     rec_id, fast_id, comp = pick(
-        scored, req.preference, max_extra, s.balanced_pct_per_min, s.meaningful_diff_pct, s.meaningful_pm25_ugm3
+        scored, rank_pref, max_extra, s.balanced_pct_per_min, s.meaningful_diff_pct,
+        2.0 if req.sensitive else s.meaningful_pm25_ugm3,
     )
     fastest = next(r for r in routes_out if r.id == fast_id)
     for r in routes_out:
@@ -293,7 +305,7 @@ async def plan_routes(
             r.delta_aqi = r.mean_aqi - fastest.mean_aqi
 
     # Recommended first, then cleanest air (or least exposure), unknown last, then time.
-    if req.preference == Preference.CLEANEST_AIR:
+    if rank_pref == Preference.CLEANEST_AIR:
         routes_out.sort(key=lambda r: (r.id != rec_id, r.mean_pm25 is None, r.mean_pm25 or 0, r.duration_s))
     else:
         routes_out.sort(
@@ -354,7 +366,7 @@ def _hotspots(segs, readings, mean) -> list[Hotspot]:
     picks = [
         (r.pm25, seg)
         for seg, r in zip(segs, readings)
-        if r is not None and r.pm25 is not None and r.pm25 >= mean * 1.2
+        if r is not None and r.pm25 is not None and r.pm25 >= mean * 1.05
     ]
     picks.sort(key=lambda x: -x[0])
     out: list[Hotspot] = []

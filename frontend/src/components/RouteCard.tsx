@@ -65,7 +65,7 @@ interface Props {
   onNavigate?: () => void;
   navigateHint?: string;
   compact?: boolean; // phones: tighter spacing
-  maxExposure?: number | null; // largest dose among the routes shown, for the bar
+  onShare?: () => void;
 }
 
 function arrival(departure: string, seconds: number) {
@@ -85,26 +85,22 @@ export function RouteCard({
   onNavigate,
   navigateHint,
   compact = false,
-  maxExposure = null,
+  onShare,
 }: Props) {
   const pm = route.mean_pm25 != null ? Math.round(route.mean_pm25) : null;
   const aqi = route.mean_aqi;
-  // Pollution dose = PM2.5 x minutes spent in it. Shown relative to the fastest route.
-  const dose = route.exposure_pm25;
-  const pct = route.delta_exposure_pct;
-  const doseText = fastest
-    ? "Baseline for comparison"
-    : pct == null
-      ? "Unknown"
-      : Math.abs(pct) < 3
-        ? "About the same as the fastest route"
-        : pct < 0
-          ? `${Math.round(Math.abs(pct))}% less than the fastest route`
-          : `${Math.round(pct)}% more than the fastest route`;
-  const doseCls = !fastest && pct != null && Math.abs(pct) >= 3 ? (pct < 0 ? " better" : " worse") : "";
-  const barW = dose != null && maxExposure ? Math.max(6, Math.min(100, (dose / maxExposure) * 100)) : 0;
-  const cleanerButLonger =
-    !fastest && pct != null && pct >= 3 && pm != null && fastestRoute?.mean_pm25 != null && pm < fastestRoute.mean_pm25 - 1;
+  const spots = route.hotspots;
+  const worst = spots.length ? Math.round(Math.max(...spots.map((h) => h.pm25))) : null;
+  const fpm = fastestRoute?.mean_pm25 != null ? Math.round(fastestRoute.mean_pm25) : null;
+  const vsFastest =
+    fastest || pm == null || fpm == null
+      ? null
+      : Math.abs(pm - fpm) < 2
+        ? "About the same air as the fastest route"
+        : pm < fpm
+          ? `${fpm - pm} µg/m³ cleaner than the fastest route`
+          : `${pm - fpm} µg/m³ dirtier than the fastest route`;
+  const vsCls = vsFastest && pm != null && fpm != null && Math.abs(pm - fpm) >= 2 ? (pm < fpm ? " better" : " worse") : "";
 
   return (
     <article
@@ -136,17 +132,7 @@ export function RouteCard({
         </span>
       </div>
 
-      <div className="dose" aria-label={`Pollution dose: ${doseText}`}>
-        <div className="dose-head">
-          <span className="dose-label">
-            Pollution dose <small>PM2.5 × minutes</small>
-          </span>
-          <span className={`dose-text${doseCls}`}>{doseText}</span>
-        </div>
-        <div className="dose-track">
-          <div className="dose-bar" style={{ width: `${barW}%`, background: pm25Color(route.mean_pm25) }} />
-        </div>
-      </div>
+      {vsFastest && <p className={`vs-fast${vsCls}`}>{vsFastest}</p>}
 
       <div className="air-boxes">
         <div
@@ -176,9 +162,10 @@ export function RouteCard({
         </div>
       )}
 
-      {selected && cleanerButLonger && (
-        <p className="rcard-note">
-          Cleaner air, but you're outside longer, so the dose is higher. Good for a run or a walk.
+      {selected && worst != null && (
+        <p className="spots">
+          <span className="spot-dot" aria-hidden />
+          {spots.length} pollution spot{spots.length === 1 ? "" : "s"} on the way, worst {worst} µg/m³ (marked on the map)
         </p>
       )}
       {selected && route.coverage < 0.9 && (
@@ -200,6 +187,20 @@ export function RouteCard({
             <Icon name="navigate" size={18} />
             Start in Google Maps
           </a>
+          {onShare && (
+            <button
+              type="button"
+              className="btn-share"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+              aria-label="Share this route"
+            >
+              <Icon name="share" size={18} />
+              Share
+            </button>
+          )}
           {navigateHint && <p className="rcard-hint">{navigateHint}</p>}
         </div>
       )}

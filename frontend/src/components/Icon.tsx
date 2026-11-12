@@ -1,6 +1,8 @@
 /** Small stroke icon set drawn for Breatheasy (24px grid, 1.8 stroke). */
 const PATHS: Record<string, string> = {
   x: "M6 6l12 12M18 6 6 18",
+  alert: "M12 4 21 19.5H3zM12 10v4.5M12 17.2v.01",
+  share: "M12 3.5v11M8 7.5l4-4 4 4M5 12.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6.5",
   star: "m12 3.6 2.55 5.2 5.75.84-4.15 4.05.98 5.71L12 16.7l-5.13 2.7.98-5.71L3.7 9.64l5.75-.84z",
   locate: "M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
   home: "M4 11.2 12 4.5l8 6.7V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z",

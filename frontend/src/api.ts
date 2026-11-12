@@ -100,6 +100,7 @@ export interface RouteQuery {
   preference: Preference;
   max_extra_minutes: number;
   departure_time?: string | null;
+  sensitive?: boolean;
 }
 
 /** Route search with a hard client-side limit so the app never hangs on a spinner. */
@@ -122,6 +123,7 @@ export async function planRoutes(q: RouteQuery, signal?: AbortSignal, timeoutMs 
 export interface AgentRequest {
   query: string;
   origin: LatLng;
+  sensitive?: boolean;
 }
 
 export interface AgentResponse {

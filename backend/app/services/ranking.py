@@ -29,6 +29,7 @@ class Scored:
     cells: set
     mean_aqi: float | None = None
     mean_pm25: float | None = None
+    penalty: float = 0.0  # sensitive mode: extra µg/m³-equivalents for busy roads and peaks
 
 
 def pick_cleanest_air(routes: list[Scored], max_extra_min: float, meaningful_ugm3: float) -> tuple[str, str, dict]:
@@ -38,6 +39,7 @@ def pick_cleanest_air(routes: list[Scored], max_extra_min: float, meaningful_ugm
     fastest = min(routes, key=lambda r: r.duration_s)
     budget_s = fastest.duration_s + max_extra_min * 60
     eligible = [r for r in routes if r.duration_s <= budget_s + 1e-6 and r.mean_pm25 is not None]
+    key = lambda r: r.mean_pm25 + r.penalty  # noqa: E731
     rnd = lambda v: round(v) if v is not None else None  # noqa: E731
     base = {"basis": "pm25", "fastest_aqi": rnd(fastest.mean_aqi), "fastest_pm25": rnd(fastest.mean_pm25)}
     if not eligible or fastest.mean_pm25 is None:
@@ -47,9 +49,9 @@ def pick_cleanest_air(routes: list[Scored], max_extra_min: float, meaningful_ugm
             "message": "No air-quality data was available for this trip, so routes are ranked by time only.",
         }
     # Lowest average PM2.5; routes within 2 µg/m³ count as a tie and the quicker one wins.
-    best = min(r.mean_pm25 for r in eligible)
-    chosen = min((r for r in eligible if r.mean_pm25 <= best + 2), key=lambda r: r.duration_s)
-    gain = fastest.mean_pm25 - chosen.mean_pm25
+    best = min(key(r) for r in eligible)
+    chosen = min((r for r in eligible if key(r) <= best + 2), key=lambda r: r.duration_s)
+    gain = key(fastest) - key(chosen)
     meaningful = chosen is not fastest and gain >= meaningful_ugm3
     if chosen is not fastest and not meaningful:
         chosen = fastest

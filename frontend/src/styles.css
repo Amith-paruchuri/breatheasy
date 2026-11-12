@@ -1994,3 +1994,21 @@ a {
 .passes-title { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fog); margin-bottom: 4px; }
 .rcard2.is-compact .rcard-time strong { font-size: 26px; }
 .rcard2.is-compact .air-box b { font-size: 20px; }
+
+/* ---- vs fastest, pollution spots, share, sensitive, mask tip ---- */
+.vs-fast { margin: -4px 0 10px; font-size: 14px; font-weight: 600; color: var(--fog); }
+.vs-fast.better { color: var(--better); }
+.vs-fast.worse { color: var(--worse); }
+.spots { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 10px; color: var(--fog); }
+.spot-dot { width: 10px; height: 10px; border-radius: 50%; background: #c62f2f; flex: none; }
+.spot-marker { display: inline-flex; align-items: center; gap: 4px; background: #c62f2f; color: #fff; font: 700 12px/1 system-ui, sans-serif; padding: 5px 8px 5px 5px; border-radius: 14px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); white-space: nowrap; }
+.spot-marker span { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #fff; color: #c62f2f; font-size: 11px; }
+.rcard-go { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.rcard-go .btn-primary { flex: 1 1 0; width: auto; min-width: 0; }
+.btn-share { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line, rgba(127,127,127,.35)); background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+.rcard-go .rcard-hint { flex-basis: 100%; }
+.sensitive-toggle { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 4px; }
+.sensitive-toggle span { display: flex; flex-direction: column; gap: 2px; }
+.sensitive-toggle small { color: var(--fog); font-size: 12px; line-height: 1.35; }
+.verdict .mask-tip, .mask-tip { font-weight: 500; display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(198, 47, 47, 0.1); color: var(--worse); font-size: 13px !important; line-height: 1.4; }
+.mask-tip svg { flex: none; margin-top: 1px; }

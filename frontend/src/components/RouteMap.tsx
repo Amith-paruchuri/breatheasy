@@ -1,4 +1,4 @@
-import { AdvancedMarker, Circle, Map, Pin, Polyline, useMap } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, Map, Pin, Polyline, useMap } from "@vis.gl/react-google-maps";
 import { useEffect } from "react";
 import { pm25Color } from "../format";
 import type { LatLng, RouteOut } from "../types";
@@ -85,16 +85,12 @@ export function RouteMap({ routes, selectedId, onSelect, origin, destination, ma
             <Polyline key={`${selected.id}-${i}`} path={s.path} strokeColor={pm25Color(s.pm25)} strokeOpacity={1} strokeWeight={7} zIndex={3} />
           ))}
           {selected.hotspots.map((h, i) => (
-            <Circle
-              key={`h-${i}`}
-              center={h.location}
-              radius={180}
-              strokeColor="#8e1f3d"
-              strokeWeight={2}
-              fillColor="#d9452f"
-              fillOpacity={0.18}
-              zIndex={4}
-            />
+            <AdvancedMarker key={`h-${i}`} position={h.location} title={`Pollution spot: PM2.5 ${Math.round(h.pm25)} µg/m³`} zIndex={5}>
+              <div className="spot-marker">
+                <span>!</span>
+                {Math.round(h.pm25)}
+              </div>
+            </AdvancedMarker>
           ))}
         </>
       )}
