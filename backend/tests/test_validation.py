@@ -107,3 +107,19 @@ def test_scheduler_can_call_run_without_browser_header():
     with TC(app) as c:  # no X-Requested-With, like Cloud Scheduler
         assert c.post("/api/validation/run").status_code == 403  # token check, not CSRF
         assert "X-Requested-With" not in c.post("/api/validation/run").text
+
+
+def test_datagov_failure_is_reported_not_500(client, monkeypatch):
+    s = app.state.settings
+    saved = (s.datagov_api_key, s.validation_token)
+    s.datagov_api_key, s.validation_token = "k", "tok"
+
+    async def boom(http, key):
+        raise httpx.ReadTimeout("slow")
+
+    monkeypatch.setattr(v, "fetch_stations", boom)
+    try:
+        r = client.post("/api/validation/run", headers={"X-Validation-Token": "tok"})
+        assert r.status_code == 502 and "did not answer" in r.json()["detail"]
+    finally:
+        s.datagov_api_key, s.validation_token = saved

@@ -90,7 +90,7 @@ async def fetch_stations(http: httpx.AsyncClient, api_key: str) -> list[dict]:
     out, offset = [], 0
     while offset < 5000:
         r = await http.get(DATAGOV_URL, params={
-            "api-key": api_key, "format": "json", "limit": 1000, "offset": offset,
+            "api-key": api_key, "format": "json", "limit": 500, "offset": offset,
             "filters[pollutant_id]": "PM2.5",
         })
         r.raise_for_status()
@@ -103,9 +103,9 @@ async def fetch_stations(http: httpx.AsyncClient, api_key: str) -> list[dict]:
             out.append({"station": x.get("station", "")[:200], "city": (x.get("city") or "")[:100],
                         "state": (x.get("state") or "")[:100], "lat": lat, "lng": lng, "pm25": pm,
                         "updated": str(x.get("last_update") or "")[:40]})
-        if len(recs) < 1000:
+        if len(recs) < 500:
             break
-        offset += 1000
+        offset += 500
     return out
 
 
@@ -140,8 +140,17 @@ async def run_once(app, max_stations: int) -> dict:
     s = app.state.settings
     if not s.datagov_api_key:
         raise HTTPException(503, "DATAGOV_API_KEY is not set")
-    async with httpx.AsyncClient(timeout=20) as http:
-        stations = await fetch_stations(http, s.datagov_api_key)
+    async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=20)) as http:
+        try:
+            stations = await fetch_stations(http, s.datagov_api_key)
+        except httpx.HTTPStatusError as e:
+            log.warning("data.gov.in %s: %s", e.response.status_code, e.response.text[:300])
+            raise HTTPException(502, f"data.gov.in answered {e.response.status_code}: {e.response.text[:200]}") from e
+        except httpx.HTTPError as e:
+            log.warning("data.gov.in unreachable: %r", e)
+            raise HTTPException(502, f"data.gov.in did not answer in time ({type(e).__name__}); try again") from e
+        if not stations:
+            raise HTTPException(502, "data.gov.in returned no PM2.5 readings")
         chosen = pick_stations(stations, max_stations)
         sem = asyncio.Semaphore(8)
         run_at = datetime.now(timezone.utc)
