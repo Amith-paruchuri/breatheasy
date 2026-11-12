@@ -19,6 +19,87 @@ interface Summary {
   street?: { near_road: { n: number; google: Err; adjusted: Err }; near_green: { n: number; google: Err; adjusted: Err } };
   cities?: Record<string, { samples: number; stations: number; google: Err; adjusted: Err; order_adjusted: Order }>;
   scatter?: { s: number; m: number }[];
+  benchmark?: Bench;
+}
+interface Bench {
+  trips: number;
+  cleaner_found_pct?: number;
+  median_cleaner_pct?: number | null;
+  best_cleaner_pct?: number | null;
+  median_cleaner_ugm3?: number | null;
+  median_extra_min?: number | null;
+  median_bad_min_avoided?: number | null;
+  median_busy_road_min_avoided?: number | null;
+  fidelity_phone_median_pct?: number | null;
+  fidelity_computer_median_pct?: number | null;
+  fidelity_computer_90_pct?: number | null;
+  by_city?: Record<string, { trips: number; cleaner_found_pct: number; median_cleaner_pct: number | null; median_extra_min: number | null }>;
+}
+
+function BenchSection({ b }: { b: Bench }) {
+  const n = (v?: number | null, suf = "") => (v == null ? "–" : `${Math.round(v)}${suf}`);
+  return (
+    <>
+      <h2>On real commutes</h2>
+      <p>
+        Breatheasy is also run on {b.trips} realistic trips between well-known places (metro stations, hospitals,
+        colleges, markets) in Delhi-NCR, Mumbai, Kolkata, Bengaluru and Hyderabad, on foot, by cycle and by two-wheeler.
+      </p>
+      <div className="ev-tiles">
+        <div>
+          <b>{n(b.cleaner_found_pct, "%")}</b>
+          <span>of trips have a cleaner route than the fastest one</span>
+        </div>
+        <div>
+          <b>{n(b.median_cleaner_pct, "%")}</b>
+          <span>cleaner air on those routes (median), for {n(b.median_extra_min)} extra min</span>
+        </div>
+        <div>
+          <b>{n(b.median_busy_road_min_avoided)} min</b>
+          <span>less beside busy main roads (median, where street data exists)</span>
+        </div>
+      </div>
+      <h2>Does Google Maps follow the chosen route?</h2>
+      <p>
+        "Start in Google Maps" sends the route with pins along it. We send the same pins to Google's routing service and
+        measure how much of Google's path stays on our route (within 40 m).
+      </p>
+      <div className="ev-tiles">
+        <div>
+          <b>{n(b.fidelity_computer_median_pct, "%")}</b>
+          <span>of the path matches on a computer (up to 8 pins, median)</span>
+        </div>
+        <div>
+          <b>{n(b.fidelity_phone_median_pct, "%")}</b>
+          <span>on a phone (Google allows 3 pins, median)</span>
+        </div>
+      </div>
+      {b.by_city && (
+        <table className="ev-table">
+          <thead>
+            <tr>
+              <th>City</th>
+              <th>Trips</th>
+              <th>Cleaner route found</th>
+              <th>Median cleaner</th>
+              <th>Extra time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(b.by_city).map(([c, v]) => (
+              <tr key={c}>
+                <td>{c}</td>
+                <td>{v.trips}</td>
+                <td>{Math.round(v.cleaner_found_pct)}%</td>
+                <td>{n(v.median_cleaner_pct, "%")}</td>
+                <td>{v.median_extra_min == null ? "–" : `${Math.round(v.median_extra_min)} min`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
 }
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -209,6 +290,8 @@ export function ValidationPage() {
           )}
         </>
       )}
+
+      {d?.benchmark && d.benchmark.trips > 0 && <BenchSection b={d.benchmark} />}
 
       <h2>Limits, stated plainly</h2>
       <ul>

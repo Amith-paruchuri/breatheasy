@@ -35,7 +35,7 @@ from .models import (
     Usage,
 )
 from .providers import ProviderError, build_providers
-from . import validation
+from . import benchmark, validation
 from .routers import account, billing
 from .services.airquality import AQCache, AQService
 from .services.planner import plan_routes
@@ -296,6 +296,7 @@ async def agent(
 app.include_router(account.router)
 app.include_router(billing.router)
 app.include_router(validation.router)
+app.include_router(benchmark.router)
 
 # Must be last: catch-all route for the single-page app.
 mount_frontend(app, settings_at_import.static_dir)

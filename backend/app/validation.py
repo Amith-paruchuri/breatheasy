@@ -267,7 +267,11 @@ async def validation_run(request: Request, x_validation_token: str = Header(defa
 async def validation_summary(request: Request):
     async with request.app.state.db.engine.connect() as c:
         rows = [dict(r._mapping) for r in (await c.execute(sa.select(samples).order_by(samples.c.run_at))).all()]
-    return summarize(rows)
+    out = summarize(rows)
+    from .benchmark import load_summary
+
+    out["benchmark"] = await load_summary(request.app.state.db.engine)
+    return out
 
 
 # ---------- usage counts ----------

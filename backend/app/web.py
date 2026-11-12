@@ -134,7 +134,7 @@ class WebMiddleware(BaseHTTPMiddleware):
             if (
                 request.method in self.STATE_CHANGING
                 and path.startswith("/api/")
-                and path not in ("/api/billing/webhook", "/api/validation/run")  # server-to-server: HMAC signature / scheduler token
+                and path not in ("/api/billing/webhook", "/api/validation/run", "/api/validation/benchmark")  # server-to-server: HMAC signature / scheduler token
                 and request.headers.get("x-requested-with") != "breatheasy"
             ):
                 response: Response = JSONResponse({"detail": "Missing X-Requested-With header."}, status_code=403)
