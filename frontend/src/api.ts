@@ -186,3 +186,18 @@ export const verifyPayment = (p: {
   period: "monthly" | "yearly";
 }) => req<{ plan: string; plus_until: string | null }>("/api/billing/verify", json("POST", p));
 export const cancelPlus = () => req<{ plan: string; plus_until: string | null }>("/api/billing/cancel", json("POST"));
+
+
+/** Anonymous usage count (event + city area only). Never blocks or throws. */
+export function postEvent(event: "maps_open" | "share" | "shared_open", at?: LatLng | null): void {
+  try {
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "breatheasy" },
+      body: JSON.stringify({ event, lat: at?.lat ?? null, lng: at?.lng ?? null }),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    /* ignore */
+  }
+}

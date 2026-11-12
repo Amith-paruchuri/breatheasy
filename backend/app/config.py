@@ -158,6 +158,10 @@ class Settings(BaseSettings):
     # app answers from free open data until midnight instead of calling Google.
     # 0 turns the cap off. 10 USD/day caps the Google bill at roughly 300 USD/month.
     google_daily_budget_usd: float = 10.0
+    # Validation against CPCB stations (data.gov.in) and the scheduler token that triggers it
+    datagov_api_key: str = ""
+    validation_token: str = ""
+    validation_stations: int = 60
 
     # --- Plans and payments ----------------------------------------------
     # Off by default: everyone gets street-level (Google) data, as before. On: signed-out

@@ -1,7 +1,7 @@
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AccountProvider, useAccount } from "./account";
-import { ApiError, addPlace, getConfig, logTrip, planRoutes, runAgent, type AgentResponse } from "./api";
+import { ApiError, addPlace, getConfig, logTrip, planRoutes, postEvent, runAgent, type AgentResponse } from "./api";
 import { AccountPanel } from "./components/AccountPanel";
 import { BottomSheet, heights, type Snap } from "./components/BottomSheet";
 import { Icon } from "./components/Icon";
@@ -14,6 +14,7 @@ import { ModePicker, TripSettings, settingsSummary } from "./components/TripCont
 import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, badAirBand, fmtTime, googleMapsUrl } from "./format";
 import { useIsDesktop, useOnline } from "./hooks";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
+import { StatsPage, ValidationPage } from "./pages/Evidence";
 import type { AppConfig, Place, Preference, RouteOut, RouteResponse, TravelMode } from "./types";
 
 const ENV_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
@@ -33,6 +34,8 @@ export default function App() {
   const path = window.location.pathname.replace(/\/+$/, "");
   if (path === "/privacy") return <PrivacyPage />;
   if (path === "/terms") return <TermsPage />;
+  if (path === "/validation") return <ValidationPage />;
+  if (path === "/stats") return <StatsPage />;
 
   if (!config) {
     return (
@@ -235,6 +238,10 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const online = useOnline();
   const desktop = useIsDesktop();
   const [shared] = useState(readSharedTrip);
+  useEffect(() => {
+    if (shared) postEvent("shared_open", shared.origin.location);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [origin, setOrigin] = useState<Place | null>(shared?.origin ?? null);
   const [destination, setDestination] = useState<Place | null>(shared?.destination ?? null);
   const [mode, setMode] = useState<TravelMode>(shared?.mode ?? "WALK");
@@ -407,6 +414,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   }
 
   function onNavigate(r: RouteOut) {
+    postEvent("maps_open", origin?.location ?? r.segments[0]?.path[0]);
     if (!acct.me || !result || !origin || !destination || loggedRoutes.has(r.id)) return;
     setLoggedRoutes((s) => new Set(s).add(r.id));
     logTrip({
@@ -592,6 +600,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     if (pm != null) text += `, average PM2.5 ${pm} µg/m³`;
     if (pm != null && fpm != null && fast && fast.id !== r.id && fpm > pm) text += ` (fastest route: ${fpm})`;
     text += ". Plan yours on Breatheasy:";
+    postEvent("share", o);
     try {
       if (navigator.share) {
         await navigator.share({ title: "Breatheasy route", text, url });
@@ -718,6 +727,8 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
 
   const legal = (
     <p className="legal-links">
+      <a href="/validation">Accuracy</a>
+      <a href="/stats">Stats</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
       <span>v{config.version}</span>

@@ -35,6 +35,7 @@ from .models import (
     Usage,
 )
 from .providers import ProviderError, build_providers
+from . import validation
 from .routers import account, billing
 from .services.airquality import AQCache, AQService
 from .services.planner import plan_routes
@@ -245,6 +246,7 @@ async def routes(
         open_reason=None if over else ent.reason,
     )
     await guard.record(resp.usage, body.mode)
+    await validation.count(request.app.state.db.engine, "search", validation.city_of(body.origin.lat, body.origin.lng))
     if ent.status is not None:
         # Street-level = this search really used the paid provider (not open data).
         street = ent.street and not over and resp.usage.aq_source != "open"
@@ -278,6 +280,7 @@ async def agent(
         request.app.state.env,
         force_open=over or not ent.street,
     )
+    await validation.count(request.app.state.db.engine, "agent", validation.city_of(body.origin.lat, body.origin.lng))
     if resp.plan:
         await guard.record(resp.plan.usage, None)
         if ent.status is not None:
@@ -292,6 +295,7 @@ async def agent(
 
 app.include_router(account.router)
 app.include_router(billing.router)
+app.include_router(validation.router)
 
 # Must be last: catch-all route for the single-page app.
 mount_frontend(app, settings_at_import.static_dir)
