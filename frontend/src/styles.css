@@ -2017,3 +2017,8 @@ a {
 .sensitive-toggle small { color: var(--fog); font-size: 12px; line-height: 1.35; }
 .verdict .mask-tip, .mask-tip { font-weight: 500; display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(198, 47, 47, 0.1); color: var(--worse); font-size: 13px !important; line-height: 1.4; }
 .mask-tip svg { flex: none; margin-top: 1px; }
+.bad-air { display: flex; align-items: center; gap: 6px; margin: -2px 0 10px; font-size: 13px; color: var(--ink); }
+.bad-air svg { flex: none; color: var(--fog); }
+.bad-air small { color: var(--fog); font-size: 12px; }
+.bad-air.better b { color: var(--better); }
+.bad-air.worse b { color: var(--worse); }

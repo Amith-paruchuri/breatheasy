@@ -2,6 +2,7 @@ import {
   aqiColor,
   aqiInk,
   pm25Color,
+  minutesAbove,
   aqiLabel,
   fmtDistance,
   fmtDuration,
@@ -66,6 +67,7 @@ interface Props {
   navigateHint?: string;
   compact?: boolean; // phones: tighter spacing
   onShare?: () => void;
+  badAir?: { level: number; label: string };
 }
 
 function arrival(departure: string, seconds: number) {
@@ -86,9 +88,12 @@ export function RouteCard({
   navigateHint,
   compact = false,
   onShare,
+  badAir,
 }: Props) {
   const pm = route.mean_pm25 != null ? Math.round(route.mean_pm25) : null;
   const aqi = route.mean_aqi;
+  const badMin = badAir ? Math.round(minutesAbove(route, badAir.level)) : null;
+  const fastBadMin = badAir && fastestRoute ? Math.round(minutesAbove(fastestRoute, badAir.level)) : null;
   const spots = route.hotspots;
   const worst = spots.length ? Math.round(Math.max(...spots.map((h) => h.pm25))) : null;
   const fpm = fastestRoute?.mean_pm25 != null ? Math.round(fastestRoute.mean_pm25) : null;
@@ -147,6 +152,17 @@ export function RouteCard({
           <span>Avg AQI · {aqiLabel(aqi)}</span>
         </div>
       </div>
+
+      {badAir && badMin != null && route.segments.some((s) => s.pm25 != null) && (
+        <p className={`bad-air${fastBadMin != null && !fastest ? (badMin < fastBadMin - 1 ? " better" : badMin > fastBadMin + 1 ? " worse" : "") : ""}`}
+          title={`Minutes where PM2.5 is above ${badAir.level} µg/m³ (India's CPCB scale)`}>
+          <Icon name="clock" size={15} />
+          <span>
+            <b>{badMin} min</b> in {badAir.label} <small>(above {badAir.level} µg/m³)</small>
+            {!fastest && fastBadMin != null && <small> · fastest route {fastBadMin} min</small>}
+          </span>
+        </p>
+      )}
 
       {route.highlights.length > 0 && (
         <div className="passes">

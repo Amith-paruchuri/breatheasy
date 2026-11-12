@@ -189,3 +189,26 @@ export function sourceLabel(r: RouteOut): string {
   if (r.source === "alternative") return "Alternative route";
   return "Side-street route";
 }
+
+
+/** Minutes of a route spent above a PM2.5 level (µg/m³). */
+export function minutesAbove(route: RouteOut, level: number): number {
+  return route.segments.reduce((m, s) => m + (s.pm25 != null && s.pm25 > level ? s.duration_s / 60 : 0), 0);
+}
+
+/**
+ * The PM2.5 level to count "minutes in bad air" against, on India's CPCB bands
+ * (above 90 poor, above 120 very poor, above 250 severe). On a very smoggy day every
+ * route spends nearly all its time above 90, which tells you nothing, so we step up
+ * to the first band the fastest route spends at most 70% of its time above.
+ */
+export const BAD_AIR_BANDS: { level: number; label: string }[] = [
+  { level: 90, label: "poor air" },
+  { level: 120, label: "very poor air" },
+  { level: 250, label: "severe air" },
+];
+export function badAirBand(fastest: RouteOut | null): { level: number; label: string } {
+  if (!fastest || fastest.duration_s <= 0) return BAD_AIR_BANDS[0];
+  const total = fastest.duration_s / 60;
+  return BAD_AIR_BANDS.find((b) => minutesAbove(fastest, b.level) <= total * 0.7) ?? BAD_AIR_BANDS[BAD_AIR_BANDS.length - 1];
+}

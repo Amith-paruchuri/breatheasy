@@ -11,7 +11,7 @@ import { RouteCard, RouteCardSkeleton } from "./components/RouteCard";
 import { RouteMap, type FitPadding } from "./components/RouteMap";
 import { SchematicMap } from "./components/SchematicMap";
 import { ModePicker, TripSettings, settingsSummary } from "./components/TripControls";
-import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, fmtTime, googleMapsUrl } from "./format";
+import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, badAirBand, fmtTime, googleMapsUrl } from "./format";
 import { useIsDesktop, useOnline } from "./hooks";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import type { AppConfig, Place, Preference, RouteOut, RouteResponse, TravelMode } from "./types";
@@ -608,6 +608,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     }
   };
 
+  const badAir = badAirBand(fastestRoute ?? null);
   const cards = result && (
     <div className={`cards${desktop ? "" : " carousel"}`} ref={carousel} key={resultKey}>
       {result.routes.map((r) => (
@@ -631,6 +632,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             navigateHint={me ? (loggedRoutes.has(r.id) ? "Added to your trip log." : "We'll add this trip to your log.") : undefined}
             compact={!desktop}
             onShare={() => shareRoute(r, fastestRoute)}
+            badAir={badAir}
           />
         </div>
       ))}
