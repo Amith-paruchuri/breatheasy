@@ -287,6 +287,38 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const [elapsed, setElapsed] = useState(0);
   const [showAccount, setShowAccount] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // One-tap feedback after a trip handed to Google Maps (asked once, within 12 hours).
+  const [askFb, setAskFb] = useState<{ lat?: number; lng?: number } | null>(null);
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const raw = localStorage.getItem("br.fb");
+        if (!raw) return;
+        const v = JSON.parse(raw);
+        const age = Date.now() - (v.t ?? 0);
+        if (age > 12 * 3600e3) localStorage.removeItem("br.fb");
+        else if (age > 15e3) setAskFb({ lat: v.lat, lng: v.lng });
+      } catch {
+        /* ignore */
+      }
+    };
+    check();
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, []);
+  const answerFb = (yes: boolean | null) => {
+    if (yes !== null && askFb) {
+      postEvent(yes ? "feedback_yes" : "feedback_no", askFb.lat != null && askFb.lng != null ? { lat: askFb.lat, lng: askFb.lng } : null);
+      setToast("Thanks, that helps.");
+    }
+    setAskFb(null);
+    try {
+      localStorage.removeItem("br.fb");
+    } catch {
+      /* ignore */
+    }
+  };
   const [loggedRoutes, setLoggedRoutes] = useState<Set<string>>(new Set());
   const [snap, setSnap] = useState<Snap>("peek");
   const [searching, setSearching] = useState(false);
@@ -417,7 +449,16 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   }
 
   function onNavigate(r: RouteOut) {
-    postEvent("maps_open", origin?.location ?? r.segments[0]?.path[0]);
+    const at = origin?.location ?? r.segments[0]?.path[0];
+    postEvent("maps_open", at);
+    // Behaviour change: the person chose a route other than the fastest one.
+    if (result && r.id !== result.fastest_id) postEvent("cleaner_route_started", at);
+    // Ask once, when they come back from Google Maps, whether they'd take it again.
+    try {
+      localStorage.setItem("br.fb", JSON.stringify({ t: Date.now(), lat: at?.lat, lng: at?.lng }));
+    } catch {
+      /* private mode */
+    }
     if (!acct.me || !result || !origin || !destination || loggedRoutes.has(r.id)) return;
     setLoggedRoutes((s) => new Set(s).add(r.id));
     logTrip({
@@ -585,6 +626,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
 
   // Best time to leave: only when leaving now (a later departure is already chosen otherwise).
   const pickDeparture = (offsetMin: number) => {
+    postEvent("time_shifted", origin?.location ?? rec?.segments[0]?.path[0]);
     const d = new Date(Date.now() + offsetMin * 60000);
     const pad = (n: number) => String(n).padStart(2, "0");
     setDeparture(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
@@ -953,6 +995,16 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
             setShowAccount(false);
           }}
         />
+      )}
+      {askFb && (
+        <div className="fb-card" role="dialog" aria-label="Quick question">
+          <span>Would you take that route again?</span>
+          <div>
+            <button type="button" onClick={() => answerFb(true)}>Yes</button>
+            <button type="button" onClick={() => answerFb(false)}>No</button>
+            <button type="button" className="fb-x" aria-label="Dismiss" onClick={() => answerFb(null)}>×</button>
+          </div>
+        </div>
       )}
       {toast && (
         <div className="toast" role="status">

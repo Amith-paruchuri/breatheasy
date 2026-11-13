@@ -2056,3 +2056,10 @@ a {
 .bt-val { font-size: 15px; font-weight: 700; border-bottom: 3px solid; padding: 0 4px 1px; line-height: 1.2; }
 .bt-note { display: block; margin-top: 6px; font-size: 11px; color: var(--fog); }
 .mark-logo { flex: none; display: block; border-radius: 24%; }
+
+/* ---- one-tap feedback after a Google Maps trip ---- */
+.fb-card { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px); z-index: 1101; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; background: var(--ink); color: var(--cloud); padding: 10px 14px; border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.25); font-size: 14px; max-width: calc(100vw - 32px); }
+.fb-card div { display: flex; gap: 6px; }
+.fb-card button { border: 0; border-radius: 10px; padding: 7px 14px; font: inherit; font-weight: 600; cursor: pointer; background: rgba(255,255,255,.14); color: inherit; }
+.fb-card button:first-child { background: #3fd39a; color: #12292b; }
+.fb-card .fb-x { background: transparent; padding: 7px 8px; }

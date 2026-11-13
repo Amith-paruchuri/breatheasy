@@ -189,7 +189,16 @@ export const cancelPlus = () => req<{ plan: string; plus_until: string | null }>
 
 
 /** Anonymous usage count (event + city area only). Never blocks or throws. */
-export function postEvent(event: "maps_open" | "share" | "shared_open", at?: LatLng | null): void {
+export type UsageEvent =
+  | "maps_open"
+  | "share"
+  | "shared_open"
+  | "cleaner_route_started" // Start in Google Maps on a route that is not the fastest
+  | "time_shifted" // picked a later, cleaner slot in Best time to leave
+  | "feedback_yes"
+  | "feedback_no";
+
+export function postEvent(event: UsageEvent, at?: LatLng | null): void {
   try {
     void fetch("/api/event", {
       method: "POST",

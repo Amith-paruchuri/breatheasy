@@ -346,6 +346,8 @@ const EV: [string, string][] = [
   ["maps_open", "Trips started in Google Maps"],
   ["share", "Routes shared"],
   ["shared_open", "Shared links opened"],
+  ["cleaner_route_started", "Trips started on a route other than the fastest"],
+  ["time_shifted", "Departures moved to a cleaner time"],
 ];
 
 export function StatsPage() {
@@ -372,6 +374,24 @@ export function StatsPage() {
             ))}
           </div>
           {d.since && <p className="muted">Counting since {d.since}.</p>}
+          {(d.totals.feedback_yes ?? 0) + (d.totals.feedback_no ?? 0) > 0 && (
+            <>
+              <h2>Would people take the route again?</h2>
+              <div className="ev-tiles">
+                <div>
+                  <b>
+                    {Math.round(
+                      (100 * (d.totals.feedback_yes ?? 0)) / ((d.totals.feedback_yes ?? 0) + (d.totals.feedback_no ?? 0)),
+                    )}
+                    %
+                  </b>
+                  <span>
+                    said yes, of {(d.totals.feedback_yes ?? 0) + (d.totals.feedback_no ?? 0)} who answered after a trip
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
           {days.length > 0 && (
             <>
               <h2>Searches per day</h2>

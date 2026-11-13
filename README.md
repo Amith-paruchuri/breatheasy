@@ -1,8 +1,12 @@
 # Breatheasy
 
-**Cleaner-air routes for Delhi-NCR.** Air pollution isn't the same on every street: a busy arterial road can carry far more fine dust than a lane beside a park a few hundred metres away, but navigation apps only optimise for time. Breatheasy compares up to eight candidate routes for a trip (Google's own, side streets, and routes through nearby parks and lakes), estimates the PM2.5 and AQI along each one, and recommends the cleanest within the extra time you accept. It works for walking, cycling, two-wheelers and cars, explains why a route is cleaner ("Passes Lodhi Garden, about 8 min beside greenery"), and hands the exact route to Google Maps for navigation.
+**Cleaner-air routes across India** (street-level detail in Delhi-NCR, Mumbai, Kolkata, Bengaluru and Hyderabad). Air pollution isn't the same on every street: a busy arterial road can carry far more fine dust than a lane beside a park a few hundred metres away, but navigation apps only optimise for time. Breatheasy compares up to eight candidate routes for a trip (Google's own, side streets, and routes through nearby parks and lakes), estimates the PM2.5 and AQI along each one, and recommends the cleanest within the extra time you accept. It works for walking, cycling, two-wheelers and cars, explains why a route is cleaner ("Passes Lodhi Garden, about 8 min beside greenery"), and hands the exact route to Google Maps for navigation.
 
 **Live app:** https://breatheasy-2lqwczvwyq-el.a.run.app (installable on phones as an app)
+
+**Validation:** checked against India's monitoring stations every three hours and on real commutes in five cities; results are public at https://breatheasy-2lqwczvwyq-el.a.run.app/validation. Method, results and limits: [VALIDATION.md](VALIDATION.md). Usage and behaviour counts: https://breatheasy-2lqwczvwyq-el.a.run.app/stats
+
+**Built with AgentFoundry:** the commute agent (`backend/app/agent.py`, `backend/tests/test_agent.py`) was built in the AgentFoundry IDE with the Gemini CLI.
 
 **Stack:** React + TypeScript (Vite, installable PWA) · FastAPI · SQLAlchemy + Alembic · Postgres (Cloud SQL) · Google Routes, Air Quality, Places, Maps JS and Identity · OpenStreetMap street context · one container on Google Cloud Run, deployed automatically from this repo by Cloud Build.
 

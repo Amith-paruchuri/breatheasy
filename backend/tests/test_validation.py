@@ -145,3 +145,11 @@ def test_openaq_parsing_and_fallback(client, monkeypatch):
 
     st = asyncio.run(go())
     assert len(st) == 1 and st[0]["city"] == "Delhi" and st[0]["pm25"] == 180.0 and len(st[0]["hour"]) == 13
+
+
+def test_behaviour_and_feedback_events_are_counted(client):
+    for ev in ("cleaner_route_started", "time_shifted", "feedback_yes", "feedback_no"):
+        assert client.post("/api/event", json={"event": ev, "lat": 28.6, "lng": 77.2}).status_code == 204
+    assert client.post("/api/event", json={"event": "search"}).status_code == 400  # server-side only
+    t = client.get("/api/stats").json()["totals"]
+    assert t["cleaner_route_started"] >= 1 and t["feedback_yes"] >= 1

@@ -342,7 +342,9 @@ async def validation_summary(request: Request):
 
 
 # ---------- usage counts ----------
-EVENTS = {"search", "agent", "maps_open", "share", "shared_open"}
+EVENTS = {"search", "agent", "maps_open", "share", "shared_open", "cleaner_route_started", "time_shifted",
+          "feedback_yes", "feedback_no"}
+CLIENT_EVENTS = EVENTS - {"search", "agent"}
 _CITY_BOXES = {  # same areas as the street layer
     "Delhi-NCR": (28.20, 76.80, 28.95, 77.75), "Mumbai": (18.88, 72.77, 19.30, 73.10),
     "Kolkata": (22.40, 88.20, 22.70, 88.50), "Bengaluru": (12.80, 77.45, 13.15, 77.80),
@@ -390,7 +392,7 @@ class EventIn(BaseModel):
 
 @router.post("/api/event", status_code=204)
 async def post_event(e: EventIn, request: Request):
-    if e.event not in {"maps_open", "share", "shared_open"}:
+    if e.event not in CLIENT_EVENTS:
         raise HTTPException(400, "Unknown event")
     # only the city area is kept, never the coordinates
     await count(request.app.state.db.engine, e.event, city_of(e.lat, e.lng))
