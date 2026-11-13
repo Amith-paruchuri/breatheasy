@@ -88,7 +88,7 @@ def test_run_stores_pairs(client, monkeypatch):
         return [{"station": "ITO", "city": "Delhi", "state": "Delhi", "lat": 28.628, "lng": 77.241, "pm25": 210.0, "updated": "x"},
                 {"station": "Bandra", "city": "Mumbai", "state": "Maharashtra", "lat": 19.06, "lng": 72.84, "pm25": 50.0, "updated": "x"}]
 
-    async def fake_g(http, key, lat, lng):
+    async def fake_g(http, key, lat, lng, at_hour=None):
         return (190.0 if lat > 25 else 60.0, 24)
 
     monkeypatch.setattr(v, "fetch_stations", fake_stations)
@@ -123,3 +123,25 @@ def test_datagov_failure_is_reported_not_500(client, monkeypatch):
         assert r.status_code == 502 and "did not answer" in r.json()["detail"]
     finally:
         s.datagov_api_key, s.validation_token = saved
+
+
+def test_openaq_parsing_and_fallback(client, monkeypatch):
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+
+    def handler(req):
+        assert req.headers["X-API-Key"] == "oa"
+        fresh = (now - timedelta(minutes=40)).isoformat().replace("+00:00", "Z")
+        old = (now - timedelta(hours=9)).isoformat().replace("+00:00", "Z")
+        return httpx.Response(200, json={"results": [
+            {"datetime": {"utc": fresh}, "value": 180.0, "coordinates": {"latitude": 28.63, "longitude": 77.24}, "locationsId": 1},
+            {"datetime": {"utc": old}, "value": 90.0, "coordinates": {"latitude": 19.06, "longitude": 72.84}, "locationsId": 2},
+            {"datetime": {"utc": fresh}, "value": 12.0, "coordinates": {"latitude": 51.5, "longitude": -0.1}, "locationsId": 3},
+        ]})
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            return await v.fetch_openaq(http, "oa")
+
+    st = asyncio.run(go())
+    assert len(st) == 1 and st[0]["city"] == "Delhi" and st[0]["pm25"] == 180.0 and len(st[0]["hour"]) == 13

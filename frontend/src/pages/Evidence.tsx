@@ -182,9 +182,9 @@ export function ValidationPage() {
   return (
     <Shell title="How accurate is Breatheasy?">
       <p>
-        Every few hours, Breatheasy checks itself against India's official air-quality monitoring stations (CPCB,
-        published on data.gov.in). For each station we compare its 24-hour average PM2.5 with the estimate Breatheasy
-        would have shown for that exact spot over the same 24 hours. These results update automatically and nothing is
+        Every few hours, Breatheasy checks itself against India's official air-quality monitoring stations (the CPCB
+        network, read through OpenAQ, with data.gov.in as a backup). For each station we compare its PM2.5 reading
+        with the estimate Breatheasy would have shown for that exact spot at the same time. These results update automatically and nothing is
         filtered out.
       </p>
       {err && <p className="muted">The results could not be loaded. Try again in a minute.</p>}

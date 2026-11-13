@@ -160,6 +160,7 @@ class Settings(BaseSettings):
     google_daily_budget_usd: float = 10.0
     # Validation against CPCB stations (data.gov.in) and the scheduler token that triggers it
     datagov_api_key: str = ""
+    openaq_api_key: str = ""  # free key from explore.openaq.org; hourly CPCB readings
     validation_token: str = ""
     validation_stations: int = 60
 
@@ -229,7 +230,7 @@ class Settings(BaseSettings):
     def public_contact_email(self) -> str:
         if self.contact_email:
             return self.contact_email
-        m = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", self.user_agent)
+        m = re.search(r"[\w.-][\w.+-]*@[\w-]+\.[\w.]+", self.user_agent.replace("+", " "))
         return m.group(0) if m else ""
 
     def production_problems(self) -> list[str]:

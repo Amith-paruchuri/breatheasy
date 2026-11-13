@@ -117,21 +117,64 @@ async def fetch_stations(http: httpx.AsyncClient, api_key: str) -> list[dict]:
     return out
 
 
-async def google_24h(http: httpx.AsyncClient, key: str, lat: float, lng: float) -> tuple[float, int] | None:
+async def google_24h(http: httpx.AsyncClient, key: str, lat: float, lng: float, at_hour: str | None = None
+                     ) -> tuple[float, int] | None:
+    """Google's PM2.5 at a spot: the 24-hour average, or (with at_hour, an ISO UTC hour
+    like '2026-11-13T04') the value for that single hour."""
     body = {"hours": 24, "pageSize": 24, "location": {"latitude": lat, "longitude": lng},
             "extraComputations": ["POLLUTANT_CONCENTRATION"], "universalAqi": False}
     r = await http.post(AQ_HISTORY_URL, json=body, headers={"X-Goog-Api-Key": key})
     if r.status_code >= 400:
         log.warning("AQ history %s: %s", r.status_code, r.text[:200])
         return None
-    vals = []
+    vals, by_hour = [], {}
     for h in r.json().get("hoursInfo", []) or []:
         for p in h.get("pollutants", []) or []:
             if p.get("code") == "pm25":
                 v = _num((p.get("concentration") or {}).get("value"))
                 if v is not None:
                     vals.append(v)
+                    by_hour[str(h.get("dateTime", ""))[:13]] = v
+    if at_hour:
+        return (by_hour[at_hour], 1) if at_hour in by_hour else None
     return (sum(vals) / len(vals), len(vals)) if vals else None
+
+
+OPENAQ_LATEST = "https://api.openaq.org/v3/parameters/2/latest"  # parameter 2 = PM2.5 in µg/m³
+
+
+async def fetch_openaq(http: httpx.AsyncClient, api_key: str, max_age_h: float = 3.0) -> list[dict]:
+    """Latest hourly PM2.5 at monitoring stations in India from OpenAQ (which carries the
+    CPCB network). Each reading is compared with Google's value for the same hour."""
+    out, now = [], datetime.now(timezone.utc)
+    for page in range(1, 31):
+        r = None
+        for attempt in range(3):
+            r = await http.get(OPENAQ_LATEST, params={"limit": 1000, "page": page}, headers={"X-API-Key": api_key})
+            if r.status_code < 500 and r.status_code != 429:
+                break
+            await asyncio.sleep(3 + 4 * attempt)
+        r.raise_for_status()
+        res = r.json().get("results", []) or []
+        for x in res:
+            c = x.get("coordinates") or {}
+            lat, lng, pm = _num(c.get("latitude")), _num(c.get("longitude")), _num(x.get("value"))
+            utc = (x.get("datetime") or {}).get("utc") or ""
+            if lat is None or lng is None or pm is None or pm > 1500 or not (6.5 < lat < 37.2 and 68 < lng < 97.5):
+                continue
+            try:
+                t = datetime.fromisoformat(utc.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if (now - t).total_seconds() > max_age_h * 3600:
+                continue
+            area = city_of(lat, lng)
+            out.append({"station": f"openaq:{x.get('locationsId')}", "city": area.replace("-NCR", ""), "state": "",
+                        "lat": lat, "lng": lng, "pm25": pm, "updated": utc[:19],
+                        "hour": t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H")})
+        if len(res) < 1000:
+            break
+    return out
 
 
 def pick_stations(stations: list[dict], n: int) -> list[dict]:
@@ -146,26 +189,33 @@ def pick_stations(stations: list[dict], n: int) -> list[dict]:
 
 async def run_once(app, max_stations: int) -> dict:
     s = app.state.settings
-    if not s.datagov_api_key:
-        raise HTTPException(503, "DATAGOV_API_KEY is not set")
+    if not s.datagov_api_key and not s.openaq_api_key:
+        raise HTTPException(503, "Neither OPENAQ_API_KEY nor DATAGOV_API_KEY is set")
     async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=20)) as http:
-        try:
-            stations = await fetch_stations(http, s.datagov_api_key)
-        except httpx.HTTPStatusError as e:
-            log.warning("data.gov.in %s: %s", e.response.status_code, e.response.text[:300])
-            raise HTTPException(502, f"data.gov.in answered {e.response.status_code}: {e.response.text[:200]}") from e
-        except httpx.HTTPError as e:
-            log.warning("data.gov.in unreachable: %r", e)
-            raise HTTPException(502, f"data.gov.in did not answer in time ({type(e).__name__}); try again") from e
+        stations, problems, source = [], [], ""
+        # OpenAQ first (hourly readings, reachable from Google Cloud); data.gov.in as fallback.
+        if s.openaq_api_key:
+            try:
+                stations, source = await fetch_openaq(http, s.openaq_api_key), "openaq"
+            except httpx.HTTPError as e:
+                problems.append(f"OpenAQ: {getattr(getattr(e, 'response', None), 'status_code', type(e).__name__)}")
+        if not stations and s.datagov_api_key:
+            try:
+                stations, source = await fetch_stations(http, s.datagov_api_key), "datagov"
+            except httpx.HTTPStatusError as e:
+                problems.append(f"data.gov.in answered {e.response.status_code}")
+            except httpx.HTTPError as e:
+                problems.append(f"data.gov.in did not answer ({type(e).__name__})")
         if not stations:
-            raise HTTPException(502, "data.gov.in returned no PM2.5 readings")
+            log.warning("no station readings: %s", problems)
+            raise HTTPException(502, "No station readings: " + ("; ".join(problems) or "sources returned nothing"))
         chosen = pick_stations(stations, max_stations)
         sem = asyncio.Semaphore(8)
         run_at = datetime.now(timezone.utc)
 
         async def one(st):
             async with sem:
-                g = await google_24h(http, s.google_maps_server_key, st["lat"], st["lng"])
+                g = await google_24h(http, s.google_maps_server_key, st["lat"], st["lng"], st.get("hour"))
             if g is None:
                 return None
             layer = app.state.env.at((st["lat"], st["lng"]))
@@ -190,7 +240,7 @@ async def run_once(app, max_stations: int) -> dict:
         await app.state.spend.record(Usage(aq_current_calls=len(chosen), aq_source="google"), None, search=False)
     except Exception:
         log.exception("could not record validation spend")
-    return {"stations_available": len(stations), "sampled": len(chosen), "stored": len(rows)}
+    return {"source": source, "stations_available": len(stations), "sampled": len(chosen), "stored": len(rows)}
 
 
 # ---------- statistics ----------

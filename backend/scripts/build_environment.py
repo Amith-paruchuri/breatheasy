@@ -26,9 +26,11 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-ENDPOINTS = [
+ENDPOINTS = [  # public Overpass servers, tried in turn (the main one is often overloaded)
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
 OUT = Path(__file__).resolve().parents[1] / "app" / "data" / "environment.json.gz"
 
@@ -54,7 +56,7 @@ def road_query(s, w, n, e) -> str:
 
 def fetch(query: str, ua: str) -> dict:
     last = None
-    for attempt in range(6):
+    for attempt in range(10):
         url = ENDPOINTS[attempt % len(ENDPOINTS)]
         try:
             req = urllib.request.Request(
@@ -64,7 +66,7 @@ def fetch(query: str, ua: str) -> dict:
                 return json.loads(r.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             last = exc
-            wait = 15 * (attempt + 1)
+            wait = min(60, 10 * (attempt + 1))
             print(f"    {url} failed ({exc}); retrying in {wait}s", flush=True)
             time.sleep(wait)
     raise SystemExit(f"Overpass unavailable after retries: {last}")
