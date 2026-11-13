@@ -30,7 +30,7 @@ class Preference(str, Enum):
 class RouteRequest(BaseModel):
     origin: LatLng
     destination: LatLng
-    mode: TravelMode = TravelMode.WALK
+    mode: TravelMode = TravelMode.DRIVE
     preference: Preference = Preference.BALANCED
     max_extra_minutes: float | None = Field(default=None, ge=0, le=180)
     departure_time: datetime | None = None  # naive values are read as Asia/Kolkata

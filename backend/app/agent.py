@@ -30,15 +30,17 @@ def parse_rules(query: str):
     q = query
 
     # 1. travel mode
-    mode = TravelMode.WALK
-    m_match = re.search(r"\b(cycle|bicycle|bike|scooter|car|cab|taxi)\b", q, re.I)
+    mode = TravelMode.DRIVE  # car unless the request names walking, cycling or a bike
+    m_match = re.search(r"\b(walk|walking|on foot|cycle|cycling|bicycle|bike|scooter|car|cab|taxi|drive)\b", q, re.I)
     if m_match:
         m = m_match.group(1).lower()
-        if m in ("cycle", "bicycle"):
+        if m in ("walk", "walking", "on foot"):
+            mode = TravelMode.WALK
+        elif m in ("cycle", "cycling", "bicycle"):
             mode = TravelMode.BICYCLE
         elif m in ("bike", "scooter"):
             mode = TravelMode.TWO_WHEELER
-        elif m in ("car", "cab", "taxi"):
+        elif m in ("car", "cab", "taxi", "drive"):
             mode = TravelMode.DRIVE
         q = q.replace(m_match.group(0), "")
 

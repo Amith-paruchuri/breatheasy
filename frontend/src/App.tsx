@@ -72,14 +72,16 @@ export default function App() {
 }
 
 export function Mark({ size = 36 }: { size?: number }) {
+  // Breatheasy logo: a road forks; the hazy branch carries particles, the clean one ends in a leaf.
   return (
-    <span className="mark" style={{ width: size, height: size }} aria-hidden>
-      <svg viewBox="0 0 32 32" width={size * 0.72} height={size * 0.72}>
-        <path d="M5 22c5 0 6-12 11-12s6 8 11 8" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
-        <circle cx="5" cy="22" r="3.2" fill="currentColor" />
-        <circle cx="27" cy="18" r="3.2" className="mark-dot" />
-      </svg>
-    </span>
+    <svg className="mark-logo" viewBox="0 0 512 512" width={size} height={size} aria-hidden>
+      <rect width="512" height="512" rx="112" fill="#12292b" />
+      <path d="M256 410V310c0-44-30-80-96-140" fill="none" stroke="#56605d" strokeWidth="30" strokeLinecap="round"/>
+      <g fill="#9a8f80"><circle cx="150" cy="128" r="13"/><circle cx="196" cy="104" r="9"/><circle cx="118" cy="176" r="10"/><circle cx="196" cy="160" r="8"/><circle cx="108" cy="116" r="7"/><circle cx="160" cy="214" r="7"/><circle cx="226" cy="134" r="7"/></g>
+      <path d="M256 410V310c0-50 42-96 112-150" fill="none" stroke="#3fd39a" strokeWidth="34" strokeLinecap="round"/>
+      <path d="M352 168c4-48 42-80 92-80-2 50-38 86-92 80z" fill="#3fd39a"/>
+      <circle cx="256" cy="410" r="32" fill="#f3f0e6"/>
+    </svg>
   );
 }
 
@@ -245,7 +247,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   }, []);
   const [origin, setOrigin] = useState<Place | null>(shared?.origin ?? null);
   const [destination, setDestination] = useState<Place | null>(shared?.destination ?? null);
-  const [mode, setMode] = useState<TravelMode>(shared?.mode ?? "WALK");
+  const [mode, setMode] = useState<TravelMode>(shared?.mode ?? "DRIVE");
   const [preference, setPreferenceRaw] = useState<Preference>(() => (shared?.pref as Preference) ?? "cleanest_air");
   const [budget, setBudgetRaw] = useState(config.cleanest_air_default_extra_minutes);
   const [sensitive, setSensitiveRaw] = useState<boolean>(() => {

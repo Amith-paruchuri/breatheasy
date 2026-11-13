@@ -20,8 +20,10 @@ def test_parsing_rules():
     p2 = parse_rules("I have asthma and need to go to Hauz Khas from AIIMS by 14:30")
     assert p2["destination"] == "Hauz Khas"
     assert p2["origin"] == "AIIMS"
-    assert p2["mode"] == TravelMode.WALK
+    assert p2["mode"] == TravelMode.DRIVE  # car unless another mode is named
     assert p2["arrive_by"].hour == 14
+    assert parse_rules("walk to Lodhi Garden by 7 am")["mode"] == TravelMode.WALK
+    assert parse_rules("reach India Gate on foot")["mode"] == TravelMode.WALK
     assert p2["arrive_by"].minute == 30
     assert "asthma" in p2["conditions"]
 
