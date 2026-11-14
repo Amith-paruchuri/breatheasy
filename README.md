@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://breatheasy-2lqwczvwyq-el.a.run.app"><img alt="Live app" src="https://img.shields.io/badge/live_app-open-3FD39A?style=for-the-badge"></a>
-  <a href="[YOUTUBE LINK]"><img alt="Demo video" src="https://img.shields.io/badge/demo-2_min_video-E5484D?style=for-the-badge"></a>
+  <a href="https://youtu.be/cBiJ1rxy1WY"><img alt="Demo video" src="https://img.shields.io/badge/demo-2_min_video-E5484D?style=for-the-badge"></a>
   <a href="https://breatheasy-2lqwczvwyq-el.a.run.app/validation"><img alt="Validation" src="https://img.shields.io/badge/validation-live-7FB7FF?style=for-the-badge"></a>
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-9FB0AA?style=for-the-badge"></a>
 </p>
