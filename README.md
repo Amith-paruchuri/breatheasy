@@ -22,7 +22,7 @@ Hundreds of millions of Indians breathe this air on the road every day: commuter
 
 ## The cleanest route, not the fastest
 
-<img src="docs/assets/fastest-vs-cleanest.svg" alt="Illustration: the fastest route runs along a busy main road with pollution spots; Breatheasy's cleanest route goes past a park and away from traffic" width="100%">
+<img src="docs/assets/fastest-vs-cleanest.svg" alt="Animated illustration: maps pick the direct busy main road past construction and a factory; Breatheasy picks the cleanest road through a park and past a lake" width="100%">
 
 | | Navigation apps | AQI apps | **Breatheasy** |
 |---|:---:|:---:|:---:|
