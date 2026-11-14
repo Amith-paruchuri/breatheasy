@@ -19,18 +19,18 @@ The figures in this file are snapshots; the links above are always current.
 - *Correlation* (Pearson r), *typical error* (median absolute error), *bias* (average of estimate minus station), share within 25%.
 - *Street adjustment*: error at stations beside busy roads and beside parks, with and without the adjustment.
 
-**Snapshot (14 Nov 2026, after 5 runs):** 220 comparisons at 165 stations.
+**Snapshot (14 Nov 2026, evening, after 9 runs):** 426 comparisons at 260 stations.
 
 | Measure | All cities | Delhi |
 |---|---|---|
-| Right order | 85% of 1,417 pairs | 82% of 812 pairs |
-| Correlation | 0.87 | 0.72 |
-| Typical error | ±14 µg/m³ | ±22 µg/m³ |
-| Bias | about 9 µg/m³ lower than stations | |
+| Right order | 81% of 2,839 pairs | 78% of 1,681 pairs |
+| Correlation | 0.82 | |
+| Typical error | ±15 µg/m³ | |
+| Bias | about 6 µg/m³ lower than stations | |
 
 A consistent offset does not change which route is cleaner, which is why ordering is the headline measure.
 
-**Street adjustment, early and small:** beside parks and lakes (13 stations) the adjustment halved the typical error (from ±13 to ±8 µg/m³). Beside busy roads (5 stations) it overshot, reading higher than the stations, so the busy-road correction is probably too strong. We will retune it once there are more stations, and report it either way.
+**Street adjustment:** beside parks and lakes (32 stations) the adjustment cut the typical error from ±10 to ±8 µg/m³. Beside busy roads (11 stations) it overshot, raising the error from ±9 to ±15 µg/m³, so the busy-road correction is too strong and will be retuned. We report both.
 
 ## 2. Trip benchmark: real commutes in five cities
 

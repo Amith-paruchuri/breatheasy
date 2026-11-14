@@ -51,11 +51,11 @@ Air comes from Google's Air Quality model (500 m grid, hourly forecast), adjuste
 
 ## Validation and real-world impact
 
-<img src="docs/assets/validation.svg" alt="85% right order against monitoring stations, correlation 0.87, 100% Google Maps match, a cleaner route on 74% of Delhi trips" width="100%">
+<img src="docs/assets/validation.svg" alt="81% right order against monitoring stations, correlation 0.82, 100% Google Maps match, a cleaner route on 74% of Delhi trips" width="100%">
 
 | Check | What we measure | Result so far |
 |---|---|---|
-| **Monitoring stations** (every 3 hours) | Our estimate vs official station readings, same spot and hour | **85%** right order on 1,417 station pairs · r = **0.87** · 220 comparisons at 165 stations |
+| **Monitoring stations** (every 3 hours) | Our estimate vs official station readings, same spot and hour | **81%** right order on 2,839 station pairs · r = **0.82** · 426 comparisons at 260 stations |
 | **Cleanest route vs fastest** (127 trips, 5 cities) | Is there a route with cleaner air than the fastest one? | yes on **74%** of Delhi trips, typically ~3% cleaner for ~10 min |
 | **Real commutes** | Does Google Maps follow the cleanest route we hand it? | **100%** median match, phone and computer |
 | *Bonus:* best time to leave | Same route, leaving now vs up to 2 hours later | up to **26%** cleaner; median **17%** in Mumbai |
