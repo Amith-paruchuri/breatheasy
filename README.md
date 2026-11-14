@@ -24,6 +24,8 @@ Built by Dr Amith Paruchuri, final-year medical student at AIIMS New Delhi, for 
 
 Hundreds of millions of Indians breathe this air on the road every day: commuters, delivery riders, children on the school run. Pollution is not the same on every street: a busy main road carries far more exhaust than a lane beside a park. Yet every navigation app picks only the fastest route, and nobody can see which way is cleaner.
 
+<img src="docs/assets/scale.svg" alt="India's PM2.5 against the WHO guideline: India 48.9, Delhi 99.6, Loni 112.5 vs the WHO guideline of 5; 1 in 6 deaths linked to air pollution; 8.2 years of life lost in Delhi-NCR" width="100%">
+
 ## The cleanest route, not the fastest
 
 <img src="docs/assets/fastest-vs-cleanest.svg" alt="Animated illustration: maps pick the direct busy main road past construction and a factory; Breatheasy picks the cleanest road through a park and past a lake" width="100%">
