@@ -44,7 +44,7 @@ Hundreds of millions of Indians breathe this air on the road every day: commuter
 - **Cleanest route:** routes ranked by the PM2.5 you actually pass through, not by speed. Each shows its average PM2.5 and AQI and the minutes you would spend in very poor air.
 - **Pollution spots:** red markers on the dirtiest stretches, so you can see why one road is worse.
 - **I'm sensitive:** keeps people with asthma, pregnant women, children and older adults further from busy roads.
-- **Go:** one tap hands the exact route to Google Maps; Share sends it on WhatsApp. Works anywhere in India, installable on any phone.
+- **Go:** one tap hands the exact route to Google Maps; Share sends it on WhatsApp. Works anywhere in India, installable on any phone, **in English or हिंदी** (one tap to switch).
 - **Extras:** a commute agent (*"reach Hauz Khas by 9 am on my cycle"*), and a *best time to leave* hint for the same route.
 
 ## How it works
@@ -86,6 +86,6 @@ Runs on free open data locally, no keys needed. Production setup, architecture, 
 
 ## Next
 
-Paired walks with a portable PM2.5 sensor on recommended vs fastest routes · a pilot with AIIMS colleagues and patients with asthma · Hindi and other Indian languages · morning alerts for saved commutes.
+Paired walks with a portable PM2.5 sensor on recommended vs fastest routes · a pilot with AIIMS colleagues and patients with asthma · more Indian languages · morning alerts for saved commutes.
 
 <sub>MIT licence. Map data © OpenStreetMap contributors. Air data: Google Air Quality API; station readings via OpenAQ (CPCB network). Pollution facts: IQAir World Air Quality Report 2025; Lancet Planetary Health 2021.</sub>

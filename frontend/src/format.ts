@@ -1,4 +1,5 @@
 import type { LatLng, RouteOut, TravelMode } from "./types";
+import { locale, t } from "./i18n";
 
 /** India's National AQI (CPCB) categories. Colours follow CPCB's green-to-maroon order,
  * adjusted so each step also differs in lightness (readable for colour-blind users). */
@@ -17,8 +18,8 @@ export function aqiColor(v: number | null | undefined): string {
 }
 
 export function aqiLabel(v: number | null | undefined): string {
-  if (v == null) return "No data";
-  return (AQI_BANDS.find((b) => v <= b.max) ?? AQI_BANDS[AQI_BANDS.length - 1]).label;
+  if (v == null) return t("No data");
+  return t((AQI_BANDS.find((b) => v <= b.max) ?? AQI_BANDS[AQI_BANDS.length - 1]).label);
 }
 
 /** Text colour that stays readable on an AQI swatch. */
@@ -49,8 +50,8 @@ export function pm25Color(v: number | null | undefined): string {
 
 export function fmtDuration(s: number): string {
   const m = Math.round(s / 60);
-  if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)} h ${m % 60} min`;
+  if (m < 60) return t("{n} min", { n: m });
+  return t("{h} h {m} min", { h: Math.floor(m / 60), m: m % 60 });
 }
 
 export function fmtDistance(m: number): string {
@@ -59,8 +60,10 @@ export function fmtDistance(m: number): string {
 
 export function fmtTime(iso: string | null): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
 }
+
+export const modeLabel = (m: TravelMode) => t(MODE_LABEL[m]);
 
 export const MODE_LABEL: Record<TravelMode, string> = {
   WALK: "Walk",
@@ -184,10 +187,10 @@ export function googleMapsUrl(
 }
 
 export function sourceLabel(r: RouteOut): string {
-  if (r.source === "green") return r.via ? `Via ${r.via}` : "Through green space";
-  if (r.source === "primary") return "Main route";
-  if (r.source === "alternative") return "Alternative route";
-  return "Side-street route";
+  if (r.source === "green") return r.via ? t("Via {via}", { via: r.via }) : t("Through green space");
+  if (r.source === "primary") return t("Main route");
+  if (r.source === "alternative") return t("Alternative route");
+  return t("Side-street route");
 }
 
 

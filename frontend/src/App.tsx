@@ -11,7 +11,8 @@ import { RouteCard, RouteCardSkeleton } from "./components/RouteCard";
 import { RouteMap, type FitPadding } from "./components/RouteMap";
 import { SchematicMap } from "./components/SchematicMap";
 import { ModePicker, TripSettings, settingsSummary } from "./components/TripControls";
-import { MODE_LABEL, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, badAirBand, fmtTime, googleMapsUrl } from "./format";
+import { getLang, setLang, t, useLang } from "./i18n";
+import { modeLabel, PM25_BANDS, PM25_SAFE_LIMIT, aqiLabel, badAirBand, fmtTime, googleMapsUrl } from "./format";
 import { useIsDesktop, useOnline } from "./hooks";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { BestTime } from "./components/BestTime";
@@ -28,7 +29,7 @@ export default function App() {
     setBootError(null);
     getConfig()
       .then(setConfig)
-      .catch(() => setBootError("Breatheasy can't connect right now. Check your internet connection, then try again."));
+      .catch(() => setBootError(t("Breatheasy can't connect right now. Check your internet connection, then try again.")));
   }, []);
   useEffect(load, [load]);
 
@@ -95,7 +96,7 @@ function Legend({ explain = false }: { explain?: boolean }) {
       <div className="legend-scale">
         <div className="legend-bar">
           {PM25_BANDS.map((b) => (
-            <i key={b.max} style={{ background: b.color }} title={b.label} />
+            <i key={b.max} style={{ background: b.color }} title={t(b.label)} />
           ))}
         </div>
         <div className="legend-ticks" aria-hidden>
@@ -108,10 +109,10 @@ function Legend({ explain = false }: { explain?: boolean }) {
       </div>
       {explain && (
         <p className="legend-note">
-          The map is coloured by PM2.5: the weight of fine dust and smoke particles in one cubic metre of air, in
-          micrograms (µg/m³). India's safe limit is {PM25_SAFE_LIMIT} (WHO's is 15), so anything orange or red is
-          above it. The AQI number on each route is the overall air-quality score built from PM2.5 and other
-          pollutants.
+          {t(
+            "The map is coloured by PM2.5: the weight of fine dust and smoke particles in one cubic metre of air, in micrograms (µg/m³). India's safe limit is {limit} (WHO's is 15), so anything orange or red is above it. The AQI number on each route is the overall air-quality score built from PM2.5 and other pollutants.",
+            { limit: PM25_SAFE_LIMIT },
+          )}
         </p>
       )}
     </div>
@@ -169,7 +170,7 @@ function AgentBox({ onPlan, sensitive }: { onPlan: (res: AgentResponse) => void;
             const res = await runAgent({ query: q, origin: { lat: pos.coords.latitude, lng: pos.coords.longitude }, sensitive }, ctrl.signal);
             onPlan(res);
           } catch (e) {
-            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
+            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : t("That didn't work. Try again in a moment."));
           } finally {
             done();
           }
@@ -180,7 +181,7 @@ function AgentBox({ onPlan, sensitive }: { onPlan: (res: AgentResponse) => void;
             const res = await runAgent({ query: q, origin: { lat: 28.61, lng: 77.23 }, sensitive }, ctrl.signal);
             onPlan(res);
           } catch (e) {
-            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : "That didn't work. Try again in a moment.");
+            if ((e as Error).name !== "AbortError") setErr(e instanceof ApiError ? e.message : t("That didn't work. Try again in a moment."));
           } finally {
             done();
           }
@@ -213,20 +214,20 @@ function AgentBox({ onPlan, sensitive }: { onPlan: (res: AgentResponse) => void;
       <div className="agent-box">
         <input
           type="text"
-          placeholder="Ask Breatheasy (e.g. reach Hauz Khas by 9 am)"
+          placeholder={t("Ask Breatheasy (e.g. reach Hauz Khas by 9 am)")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit(query)}
           disabled={loading}
         />
         {hasMic && (
-          <button type="button" className={`mic-btn${listening ? " is-listening" : ""}`} onClick={startListening} aria-label="Speak">
+          <button type="button" className={`mic-btn${listening ? " is-listening" : ""}`} onClick={startListening} aria-label={t("Speak")}>
             <Icon name="mic" size={20} />
           </button>
         )}
       </div>
       {loading && <span className="spinner small agent-loading" />}
-      {loading && <p className="agent-note">Comparing routes and departure times…</p>}
+      {loading && <p className="agent-note">{t("Comparing routes and departure times…")}</p>}
       {err && !loading && (
         <p className="agent-note agent-err" role="alert">
           {err}
@@ -310,7 +311,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const answerFb = (yes: boolean | null) => {
     if (yes !== null && askFb) {
       postEvent(yes ? "feedback_yes" : "feedback_no", askFb.lat != null && askFb.lng != null ? { lat: askFb.lat, lng: askFb.lng } : null);
-      setToast("Thanks, that helps.");
+      setToast(t("Thanks, that helps."));
     }
     setAskFb(null);
     try {
@@ -338,7 +339,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       setResult(null);
       return;
     }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       inflight.current?.abort();
       const ctrl = new AbortController();
       inflight.current = ctrl;
@@ -368,14 +369,14 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         carousel.current?.scrollTo({ left: 0 });
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
-          setError(e instanceof ApiError ? e : new ApiError("Something didn't work. Try again.", 0));
+          setError(e instanceof ApiError ? e : new ApiError(t("Something didn't work. Try again."), 0));
           setResult(null);
         }
       } finally {
         if (inflight.current === ctrl) setLoading(false);
       }
     }, 280);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [origin, destination, mode, preference, budget, leaveLater, departure, sensitive, retry]);
 
   const onAgentPlan = useCallback(
@@ -408,12 +409,12 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   }, [loading]);
   const progressText =
     elapsed < 1.5
-      ? "Finding routes"
+      ? t("Finding routes")
       : elapsed < 4
-        ? "Checking the air along each route"
+        ? t("Checking the air along each route")
         : elapsed < 9
-          ? "Comparing exposure on each route"
-          : "Long trip, still checking. Almost there";
+          ? t("Comparing exposure on each route")
+          : t("Long trip, still checking. Almost there");
 
   useEffect(() => {
     if (!toast) return;
@@ -476,8 +477,8 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       mean_pm25: r.mean_pm25,
       data_source: (result.data.aq_source ?? result.data.provider).slice(0, 32),
     })
-      .then(() => setToast("Trip added to your log"))
-      .catch(() => setToast("This trip couldn't be added to your log"));
+      .then(() => setToast(t("Trip added to your log")))
+      .catch(() => setToast(t("This trip couldn't be added to your log")));
   }
 
   function downloadTripData() {
@@ -519,14 +520,27 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     fitPadding,
   };
 
+  const lang = useLang();
+  const langButton = (
+    <button
+      type="button"
+      className="lang-btn"
+      onClick={() => setLang(lang === "hi" ? "en" : "hi")}
+      aria-label={lang === "hi" ? "Switch to English" : "हिंदी में देखें"}
+      lang={lang === "hi" ? "en" : "hi"}
+    >
+      {lang === "hi" ? "English" : "हिंदी"}
+    </button>
+  );
+
   const accountButton = config.accounts_enabled && (
-    <button type="button" className="avatar-btn" onClick={() => setShowAccount(true)} aria-label={me ? "Your account" : "Sign in"}>
+    <button type="button" className="avatar-btn" onClick={() => setShowAccount(true)} aria-label={me ? t("Your account") : t("Sign in")}>
       {me?.picture ? (
         <img src={me.picture} alt="" referrerPolicy="no-referrer" />
       ) : me ? (
         <span className="avatar-letter">{(me.name || me.email)[0]}</span>
       ) : (
-        <span className="avatar-signin">Sign in</span>
+        <span className="avatar-signin">{t("Sign in")}</span>
       )}
     </button>
   );
@@ -534,7 +548,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   const search = (
     <div className="search">
       <PlaceInput
-        label="Start"
+        label={t("Start")}
         role="origin"
         value={origin}
         onChange={pickOrigin}
@@ -543,7 +557,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         onFocusChange={setSearching}
       />
       <PlaceInput
-        label="Where to?"
+        label={t("Where to?")}
         role="destination"
         value={destination}
         onChange={pickDestination}
@@ -558,7 +572,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           setOrigin(destination);
           setDestination(origin);
         }}
-        aria-label="Swap start and destination"
+        aria-label={t("Swap start and destination")}
       >
         <Icon name="swap" size={18} />
       </button>
@@ -569,12 +583,12 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     <>
       {!online && (
         <p className="banner warn" role="status">
-          <Icon name="wifiOff" size={16} /> You're offline. Planning will resume when you reconnect.
+          <Icon name="wifiOff" size={16} /> {t("You're offline. Planning will resume when you reconnect.")}
         </p>
       )}
       {config.mock && (
         <p className="banner warn" role="status">
-          Demo mode: routes and air quality are made up.
+          {t("Demo mode: routes and air quality are made up.")}
         </p>
       )}
     </>
@@ -587,28 +601,32 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
   let subline = "";
   if (c && c.basis === "pm25") {
     if (c.meaningful) {
-      headline = mins > 0 ? `Cleaner air, ${mins} min longer` : "Cleaner air, no extra time";
-      subline = `Average PM2.5 ${c.recommended_pm25} µg/m³ instead of ${c.fastest_pm25} on the fastest route`;
-      subline += c.recommended_aqi != null ? ` (AQI ${c.recommended_aqi} vs ${c.fastest_aqi}).` : ".";
-      if (rec?.via) subline += ` It goes via ${rec.via}.`;
+      headline = mins > 0 ? t("Cleaner air, {n} min longer", { n: mins }) : t("Cleaner air, no extra time");
+      subline = t("Average PM2.5 {a} µg/m³ instead of {b} on the fastest route", { a: c.recommended_pm25 ?? "", b: c.fastest_pm25 ?? "" });
+      subline += c.recommended_aqi != null ? t(" (AQI {a} vs {b}).", { a: c.recommended_aqi, b: c.fastest_aqi ?? "" }) : getLang() === "hi" ? "।" : ".";
+      if (rec?.via) subline += t(" It goes via {via}.", { via: rec.via });
     } else {
-      headline = c.fastest_pm25 != null ? `Air is similar on every route` : "Fastest route";
+      headline = c.fastest_pm25 != null ? t("Air is similar on every route") : t("Fastest route");
       subline =
         c.fastest_pm25 != null
-          ? `Around ${c.fastest_pm25} µg/m³ PM2.5 (AQI ${c.fastest_aqi}, ${aqiLabel(c.fastest_aqi).toLowerCase()}) whichever way you go, so take the quickest.`
+          ? t("Around {pm} µg/m³ PM2.5 (AQI {aqi}, {label}) whichever way you go, so take the quickest.", {
+              pm: c.fastest_pm25,
+              aqi: c.fastest_aqi ?? "",
+              label: aqiLabel(c.fastest_aqi).toLowerCase(),
+            })
           : c.message;
     }
   } else if (c) {
     headline = c.meaningful
       ? mins > 0
-        ? `Worth ${mins} extra minute${mins === 1 ? "" : "s"}`
-        : "Less pollution, no extra time"
+        ? t("Worth {n} extra minutes", { n: mins })
+        : t("Less pollution, no extra time")
       : result!.preference === "fastest"
-        ? "Fastest route"
-        : "Take the fastest route";
+        ? t("Fastest route")
+        : t("Take the fastest route");
     subline =
       c.meaningful && c.reduction_pct != null
-        ? `You'd breathe about ${Math.round(c.reduction_pct)}% less pollution than on the fastest route.`
+        ? t("You'd breathe about {n}% less pollution than on the fastest route.", { n: Math.round(c.reduction_pct) })
         : c.message;
   }
   const verdict = result && (
@@ -656,13 +674,13 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     if (origin?.label) q.set("fl", origin.label.split(",")[0]);
     if (destination?.label) q.set("tl", destination.label.split(",")[0]);
     const url = `${window.location.origin}/?${q.toString()}`;
-    const to = destination?.label?.split(",")[0] ?? "my destination";
+    const to = destination?.label?.split(",")[0] ?? t("my destination");
     const pm = r.mean_pm25 != null ? Math.round(r.mean_pm25) : null;
     const fpm = fast?.mean_pm25 != null ? Math.round(fast.mean_pm25) : null;
-    let text = `My cleaner-air route to ${to}: ${Math.round(r.duration_s / 60)} min`;
-    if (pm != null) text += `, average PM2.5 ${pm} µg/m³`;
-    if (pm != null && fpm != null && fast && fast.id !== r.id && fpm > pm) text += ` (fastest route: ${fpm})`;
-    text += ". Plan yours on Breatheasy:";
+    let text = t("My cleaner-air route to {to}: {n} min", { to, n: Math.round(r.duration_s / 60) });
+    if (pm != null) text += t(", average PM2.5 {pm} µg/m³", { pm });
+    if (pm != null && fpm != null && fast && fast.id !== r.id && fpm > pm) text += t(" (fastest route: {pm})", { pm: fpm });
+    text += t(". Plan yours on Breatheasy:");
     postEvent("share", o);
     try {
       if (navigator.share) {
@@ -674,7 +692,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     }
     try {
       await navigator.clipboard.writeText(`${text} ${url}`);
-      setToast("Link copied. Paste it in WhatsApp or anywhere.");
+      setToast(t("Link copied. Paste it in WhatsApp or anywhere."));
     } catch {
       window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener");
     }
@@ -701,7 +719,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
               agentMode ?? mode,
             )}
             onNavigate={() => onNavigate(r)}
-            navigateHint={me ? (loggedRoutes.has(r.id) ? "Added to your trip log." : "We'll add this trip to your log.") : undefined}
+            navigateHint={me ? (loggedRoutes.has(r.id) ? t("Added to your trip log.") : t("We'll add this trip to your log.")) : undefined}
             compact={!desktop}
             onShare={() => shareRoute(r, fastestRoute)}
             badAir={badAir}
@@ -713,8 +731,8 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
 
   const emptyState = !result && !loading && !error && (
     <div className="empty">
-      <h2>Where are you heading?</h2>
-      <p>Enter a start and destination. We'll compare the routes and show which one has cleaner air, and how much time it costs.</p>
+      <h2>{t("Where are you heading?")}</h2>
+      <p>{t("Enter a start and destination. We'll compare the routes and show which one has cleaner air, and how much time it costs.")}</p>
       {me && acct.places.length > 0 && (
         <div className="quick-chips">
           {acct.places.slice(0, 6).map((p) => (
@@ -736,7 +754,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
       )}
       {config.accounts_enabled && !me && (
         <button type="button" className="text-btn" onClick={() => setShowAccount(true)}>
-          Sign in to save places and keep a trip log
+          {t("Sign in to save places and keep a trip log")}
         </button>
       )}
     </div>
@@ -768,13 +786,13 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
     <footer className="data-foot">
       <p>
         {result.data.resolution_note}
-        {result.data.oldest_observation && ` Current conditions as of ${fmtTime(result.data.oldest_observation)}.`}
-        {result.data.uses_forecast && " Later parts of the trip use the hourly forecast."}
+        {result.data.oldest_observation && t(" Current conditions as of {t}.", { t: fmtTime(result.data.oldest_observation) })}
+        {result.data.uses_forecast && t(" Later parts of the trip use the hourly forecast.")}
       </p>
-      <p>Pollution spots are the stretches of a route with the highest PM2.5. Air-quality guidance here is general information, not medical advice.</p>
-      <p>Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.</p>
+      <p>{t("Pollution spots are the stretches of a route with the highest PM2.5. Air-quality guidance here is general information, not medical advice.")}</p>
+      <p>{t("Google Maps follows these same streets, using a few pins it shows as stops (just pass through them). Its time can differ by a few minutes because it uses live traffic.")}</p>
       <details>
-        <summary>Data sources and cost</summary>
+        <summary>{t("Data sources and cost")}</summary>
         <p>
           Routes from {result.data.routes_source ?? result.data.provider}, air quality from {result.data.aq_source ?? result.data.provider}.
           {" "}Routes calls {result.usage.routes_calls}, air-quality calls {result.usage.aq_current_calls + result.usage.aq_forecast_calls}
@@ -782,7 +800,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           {result.usage.estimated_cost_usd != null && `, about $${result.usage.estimated_cost_usd.toFixed(4)}`}.
         </p>
         <button type="button" className="text-btn" onClick={downloadTripData}>
-          Download trip data
+          {t("Download trip data")}
         </button>
       </details>
     </footer>
@@ -790,10 +808,10 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
 
   const legal = (
     <p className="legal-links">
-      <a href="/validation">Accuracy</a>
-      <a href="/stats">Stats</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
+      <a href="/validation">{t("Accuracy")}</a>
+      <a href="/stats">{t("Stats")}</a>
+      <a href="/privacy">{t("Privacy")}</a>
+      <a href="/terms">{t("Terms")}</a>
       <span>v{config.version}</span>
     </p>
   );
@@ -805,7 +823,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         {error.code === "too_far" &&
           error.suggestModes.map((m, i) => (
             <button key={m} type="button" className={`chip${i === error.suggestModes.length - 1 ? " chip-solid" : ""}`} onClick={() => setMode(m)}>
-              Go by {MODE_LABEL[m].toLowerCase()}
+              {t("Go by {mode}", { mode: modeLabel(m).toLowerCase() })}
             </button>
           ))}
         {error.code === "too_far" && (
@@ -818,12 +836,12 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
               setTimeout(() => document.getElementById("place-origin")?.focus(), 50);
             }}
           >
-            Change start point
+            {t("Change start point")}
           </button>
         )}
         {error.code !== "too_far" && error.status !== 400 && error.status !== 422 && (
           <button type="button" className="chip chip-solid" onClick={() => setRetry((n) => n + 1)}>
-            Try again
+            {t("Try again")}
           </button>
         )}
       </div>
@@ -862,8 +880,9 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           <Mark />
           <div className="brand-name">
             <h1>Breatheasy</h1>
-            <p>Cleaner-air routes across {config.region.service_name ?? "India"}</p>
+            <p>{t("Cleaner-air routes across {region}", { region: t(config.region.service_name ?? "India") })}</p>
           </div>
+          {langButton}
           {accountButton}
         </header>
         {banners}
@@ -897,8 +916,9 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                   <Icon name="chevron" size={14} />
                   <span className="tripbar-to">{short(destination)}</span>
                 </span>
-                <span className="tripbar-edit">Edit</span>
+                <span className="tripbar-edit">{t("Edit")}</span>
               </button>
+              {langButton}
               {accountButton}
             </div>
           ) : (
@@ -907,7 +927,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                 <div className="mtop-bar">
                   {tripSet ? (
                     <button type="button" className="chip chip-float" onClick={() => setEditTrip(false)}>
-                      Done
+                      {t("Done")}
                     </button>
                   ) : (
                     <span className="brand-inline">
@@ -915,7 +935,10 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
                       <b>Breatheasy</b>
                     </span>
                   )}
-                  {accountButton}
+                  <span className="mtop-right">
+                    {langButton}
+                    {accountButton}
+                  </span>
                 </div>
               )}
               <AgentBox onPlan={onAgentPlan} sensitive={sensitive} />
@@ -926,7 +949,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
           {banners}
         </div>
         {!searching && (
-          <BottomSheet snap={snap} onSnap={setSnap} label="Routes">
+          <BottomSheet snap={snap} onSnap={setSnap} label={t("Routes")}>
             <div aria-live="polite">
               {tripSet && (
                 <div className="mcontrols">
@@ -955,7 +978,7 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
               {result ? (
                 <details className="about-data">
                   <summary>
-                    <Icon name="info" size={16} /> About this data
+                    <Icon name="info" size={16} /> {t("About this data")}
                   </summary>
                   <Legend explain />
                   {footer}
@@ -997,12 +1020,12 @@ function Planner({ config, mapsKey }: { config: AppConfig; mapsKey: string }) {
         />
       )}
       {askFb && (
-        <div className="fb-card" role="dialog" aria-label="Quick question">
-          <span>Would you take that route again?</span>
+        <div className="fb-card" role="dialog" aria-label={t("Would you take that route again?")}>
+          <span>{t("Would you take that route again?")}</span>
           <div>
-            <button type="button" onClick={() => answerFb(true)}>Yes</button>
-            <button type="button" onClick={() => answerFb(false)}>No</button>
-            <button type="button" className="fb-x" aria-label="Dismiss" onClick={() => answerFb(null)}>×</button>
+            <button type="button" onClick={() => answerFb(true)}>{t("Yes")}</button>
+            <button type="button" onClick={() => answerFb(false)}>{t("No")}</button>
+            <button type="button" className="fb-x" aria-label={t("Dismiss")} onClick={() => answerFb(null)}>×</button>
           </div>
         </div>
       )}

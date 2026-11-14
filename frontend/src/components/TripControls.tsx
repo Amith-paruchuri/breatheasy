@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MODE_LABEL } from "../format";
+import { modeLabel } from "../format";
+import { locale, t } from "../i18n";
 import type { Preference, TravelMode } from "../types";
 import { Icon } from "./Icon";
 
@@ -20,7 +21,7 @@ export const PREFS: { id: Preference; label: string; hint: string }[] = [
 
 export function ModePicker({ mode, onMode, compact = false }: { mode: TravelMode; onMode: (m: TravelMode) => void; compact?: boolean }) {
   return (
-    <div className={`modes${compact ? " modes-compact" : ""}`} role="radiogroup" aria-label="How are you travelling?">
+    <div className={`modes${compact ? " modes-compact" : ""}`} role="radiogroup" aria-label={t("How are you travelling?")}>
       {MODES.map((m) => (
         <button
           key={m.id}
@@ -29,13 +30,13 @@ export function ModePicker({ mode, onMode, compact = false }: { mode: TravelMode
           aria-checked={mode === m.id}
           className={`mode${mode === m.id ? " on" : ""}`}
           onClick={() => onMode(m.id)}
-          aria-label={compact ? MODE_LABEL[m.id] : undefined}
-          title={compact ? MODE_LABEL[m.id] : undefined}
+          aria-label={compact ? modeLabel(m.id) : undefined}
+          title={compact ? modeLabel(m.id) : undefined}
         >
           <Icon name={m.icon} size={19} />
-          <span className="mode-long">{MODE_LABEL[m.id]}</span>
+          <span className="mode-long">{modeLabel(m.id)}</span>
           <span className="mode-short" aria-hidden>
-            {m.short}
+            {t(m.short)}
           </span>
         </button>
       ))}
@@ -60,12 +61,12 @@ export function TripSettings(p: SettingsProps) {
   const [open, setOpen] = useState<null | "budget" | "time">(null);
   const departLabel =
     p.leaveLater && p.departure
-      ? new Date(p.departure).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" })
-      : "Leave now";
+      ? new Date(p.departure).toLocaleString(locale(), { weekday: "short", hour: "numeric", minute: "2-digit" })
+      : t("Leave now");
 
   return (
     <div className="settings">
-      <div className="prefs" role="radiogroup" aria-label="Route preference">
+      <div className="prefs" role="radiogroup" aria-label={t("Route preference")}>
         {PREFS.map((x) => (
           <button
             key={x.id}
@@ -75,17 +76,17 @@ export function TripSettings(p: SettingsProps) {
             className={`pref${p.preference === x.id ? " on" : ""}`}
             onClick={() => p.onPreference(x.id)}
           >
-            {x.label}
+            {t(x.label)}
           </button>
         ))}
       </div>
-      <p className="pref-hint">{PREFS.find((x) => x.id === p.preference)?.hint}</p>
+      <p className="pref-hint">{t(PREFS.find((x) => x.id === p.preference)?.hint ?? "")}</p>
 
       <label className="toggle sensitive-toggle">
         <input type="checkbox" checked={p.sensitive} onChange={(e) => p.onSensitive(e.target.checked)} />
         <span>
-          <b>I'm sensitive to pollution</b>
-          <small>Asthma, pregnancy, older age, or travelling with children: stays further from busy roads and pollution spots.</small>
+          <b>{t("I'm sensitive to pollution")}</b>
+          <small>{t("Asthma, pregnancy, older age, or travelling with children: stays further from busy roads and pollution spots.")}</small>
         </span>
       </label>
 
@@ -96,7 +97,7 @@ export function TripSettings(p: SettingsProps) {
           aria-expanded={open === "budget"}
           onClick={() => setOpen(open === "budget" ? null : "budget")}
         >
-          {p.budget >= ANY_TIME ? "Any extra time" : p.budget === 0 ? "No extra time" : `Up to ${p.budget} min longer`}
+          {p.budget >= ANY_TIME ? t("Any extra time") : p.budget === 0 ? t("No extra time") : t("Up to {n} min longer", { n: p.budget })}
         </button>
         <button
           type="button"
@@ -110,7 +111,7 @@ export function TripSettings(p: SettingsProps) {
 
       {open === "budget" && (
         <div className="popover budget">
-          <label htmlFor="budget-range">How much longer would you travel for cleaner air?</label>
+          <label htmlFor="budget-range">{t("How much longer would you travel for cleaner air?")}</label>
           <input
             id="budget-range"
             type="range"
@@ -132,7 +133,7 @@ export function TripSettings(p: SettingsProps) {
               checked={p.budget >= ANY_TIME}
               onChange={(e) => p.onBudget(e.target.checked ? ANY_TIME : 45)}
             />
-            <span>Any extra time: show me the cleanest air, however long</span>
+            <span>{t("Any extra time: show me the cleanest air, however long")}</span>
           </label>
         </div>
       )}
@@ -140,10 +141,10 @@ export function TripSettings(p: SettingsProps) {
         <div className="popover">
           <div className="seg">
             <button type="button" className={!p.leaveLater ? "on" : ""} onClick={() => p.onLeaveLater(false)}>
-              Leave now
+              {t("Leave now")}
             </button>
             <button type="button" className={p.leaveLater ? "on" : ""} onClick={() => p.onLeaveLater(true)}>
-              Leave later
+              {t("Leave later")}
             </button>
           </div>
           {p.leaveLater && (
@@ -151,10 +152,10 @@ export function TripSettings(p: SettingsProps) {
               type="datetime-local"
               value={p.departure}
               onChange={(e) => p.onDeparture(e.target.value)}
-              aria-label="Departure time"
+              aria-label={t("Departure time")}
             />
           )}
-          <p className="pref-hint">Later departures use the hourly air-quality forecast.</p>
+          <p className="pref-hint">{t("Later departures use the hourly air-quality forecast.")}</p>
         </div>
       )}
     </div>
@@ -163,12 +164,12 @@ export function TripSettings(p: SettingsProps) {
 
 /** One-line summary of the trip settings, for the compact phone controls. */
 export function settingsSummary(preference: Preference, budget: number, leaveLater: boolean, departure: string) {
-  const pref = PREFS.find((x) => x.id === preference)?.label ?? "";
+  const pref = t(PREFS.find((x) => x.id === preference)?.label ?? "");
   const time =
-    preference === "fastest" ? "" : budget >= ANY_TIME ? " · any time" : budget === 0 ? " · no extra time" : ` · +${budget} min`;
+    preference === "fastest" ? "" : budget >= ANY_TIME ? t(" · any time") : budget === 0 ? t(" · no extra time") : ` · +${t("{n} min", { n: budget })}`;
   const when =
     leaveLater && departure
-      ? ` · ${new Date(departure).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" })}`
+      ? ` · ${new Date(departure).toLocaleString(locale(), { weekday: "short", hour: "numeric", minute: "2-digit" })}`
       : "";
   return `${pref}${time}${when}`;
 }

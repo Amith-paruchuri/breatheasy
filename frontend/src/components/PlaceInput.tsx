@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { autocomplete, placeDetails } from "../api";
 import { pushRecent, readRecents, type RecentPlace } from "../hooks";
 import type { Place, SavedPlace, Suggestion } from "../types";
+import { t } from "../i18n";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -18,6 +19,8 @@ const newSession = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+const isMyLoc = (l: string) => l.startsWith("My location") || l.startsWith("मेरी लोकेशन");
 
 export function PlaceInput({ label, role, value, onChange, saved = [], onSave, onFocusChange }: Props) {
   const [text, setText] = useState(value?.label ?? "");
@@ -38,7 +41,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
     setText(value?.label ?? "");
     setSaving(false);
     setSavedMsg(null);
-    if (!value || !value.label.startsWith("My location")) setNote(null);
+    if (!value || !isMyLoc(value.label)) setNote(null);
   }, [value]);
 
   useEffect(() => {
@@ -84,7 +87,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      setErr("This browser can't share your location. Type a place instead.");
+      setErr(t("This browser can't share your location. Type a place instead."));
       return;
     }
     setBusy(true);
@@ -95,7 +98,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
         // Laptops without GPS often locate by Wi-Fi or IP and can be kilometres off.
         const rough = acc > 500;
         choose({
-          label: rough ? "My location (approximate)" : "My location",
+          label: rough ? t("My location (approximate)") : t("My location"),
           location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
         });
         setNote(
@@ -108,8 +111,8 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
         setBusy(false);
         setErr(
           e.code === e.PERMISSION_DENIED
-            ? "Location access is off for this site. Allow it in your browser settings, or type a place."
-            : "Couldn't get your location. Type a place instead.",
+            ? t("Location access is off for this site. Allow it in your browser settings, or type a place.")
+            : t("Couldn't get your location. Type a place instead."),
         );
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -186,7 +189,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
           </button>
         )}
       </div>
-      {onSave && value && !savedMsg && !value.label.startsWith("My location") && (
+      {onSave && value && !savedMsg && !isMyLoc(value.label) && (
         <button
           type="button"
           className={`place-action${saving ? " on" : ""}`}
@@ -205,7 +208,7 @@ export function PlaceInput({ label, role, value, onChange, saved = [], onSave, o
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={useMyLocation}>
                 <Icon name="locate" />
                 <span>
-                  <strong>Your location</strong>
+                  <strong>{t("Your location")}</strong>
                 </span>
               </button>
             </li>

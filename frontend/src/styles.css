@@ -2063,3 +2063,39 @@ a {
 .fb-card button { border: 0; border-radius: 10px; padding: 7px 14px; font: inherit; font-weight: 600; cursor: pointer; background: rgba(255,255,255,.14); color: inherit; }
 .fb-card button:first-child { background: #3fd39a; color: #12292b; }
 .fb-card .fb-x { background: transparent; padding: 7px 8px; }
+
+/* ============ language switch ============ */
+.mtop-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.lang-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--cloud);
+  color: var(--ink);
+  box-shadow: var(--lift-sm);
+  font: 600 14px var(--font-body, inherit);
+  cursor: pointer;
+  flex: none;
+}
+.dpanel .lang-btn {
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+.lang-btn:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+:lang(hi) body,
+html[lang="hi"] body {
+  font-feature-settings: normal;
+}
+.tripbar .lang-btn {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}

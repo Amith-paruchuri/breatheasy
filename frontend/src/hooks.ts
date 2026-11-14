@@ -47,7 +47,7 @@ export function readRecents(): RecentPlace[] {
 }
 
 export function pushRecent(p: RecentPlace): void {
-  if (p.label.startsWith("My location")) return;
+  if (p.label.startsWith("My location") || p.label.startsWith("मेरी लोकेशन")) return;
   try {
     const list = readRecents().filter((r) => !(Math.abs(r.lat - p.lat) < 1e-5 && Math.abs(r.lng - p.lng) < 1e-5));
     localStorage.setItem(RECENTS_KEY, JSON.stringify([p, ...list].slice(0, 6)));

@@ -10,6 +10,7 @@ import {
 } from "../format";
 import type { Highlight, RouteOut } from "../types";
 import { Icon } from "./Icon";
+import { locale, t, tHighlight } from "../i18n";
 
 /** PM2.5 along the journey: colour at each point is the air there, laid out by
  * minutes travelled, blended so it reads as one continuous ribbon. */
@@ -72,7 +73,7 @@ interface Props {
 
 function arrival(departure: string, seconds: number) {
   const t = new Date(new Date(departure).getTime() + seconds * 1000);
-  return t.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  return t.toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit" });
 }
 
 export function RouteCard({
@@ -101,10 +102,10 @@ export function RouteCard({
     fastest || pm == null || fpm == null
       ? null
       : Math.abs(pm - fpm) < 2
-        ? "About the same air as the fastest route"
+        ? t("About the same air as the fastest route")
         : pm < fpm
-          ? `${fpm - pm} µg/m³ cleaner than the fastest route`
-          : `${pm - fpm} µg/m³ dirtier than the fastest route`;
+          ? t("{n} µg/m³ cleaner than the fastest route", { n: fpm - pm })
+          : t("{n} µg/m³ dirtier than the fastest route", { n: pm - fpm });
   const vsCls = vsFastest && pm != null && fpm != null && Math.abs(pm - fpm) >= 2 ? (pm < fpm ? " better" : " worse") : "";
 
   return (
@@ -120,20 +121,20 @@ export function RouteCard({
     >
       <header className="rcard-top">
         {recommended ? (
-          <span className="tag tag-rec">Recommended</span>
+          <span className="tag tag-rec">{t("Recommended")}</span>
         ) : fastest ? (
-          <span className="tag">Fastest</span>
+          <span className="tag">{t("Fastest")}</span>
         ) : (
           <span className="rcard-src">{sourceLabel(route)}</span>
         )}
-        {!route.within_budget && <span className="rcard-src">Longer than your limit</span>}
+        {!route.within_budget && <span className="rcard-src">{t("Longer than your limit")}</span>}
       </header>
 
       <div className="rcard-time">
         <strong>{fmtDuration(route.duration_s)}</strong>
         <span>
-          Arrive {arrival(departure, route.duration_s)} · {fmtDistance(route.distance_m)}
-          {route.extra_minutes > 0.5 && <> · +{Math.round(route.extra_minutes)} min</>}
+          {t("Arrive {t}", { t: arrival(departure, route.duration_s) })} · {fmtDistance(route.distance_m)}
+          {route.extra_minutes > 0.5 && <> · +{t("{n} min", { n: Math.round(route.extra_minutes) })}</>}
         </span>
       </div>
 
@@ -145,11 +146,11 @@ export function RouteCard({
           style={{ background: pm25Color(route.mean_pm25), color: pm != null && pm > 120 ? "#fff" : "#1b1b1b" }}
         >
           <b>{pm ?? "–"}</b>
-          <span>Avg PM2.5 · µg/m³</span>
+          <span>{t("Avg PM2.5 · µg/m³")}</span>
         </div>
         <div className="air-box" style={{ background: aqiColor(aqi), color: aqiInk(aqi) }}>
           <b>{aqi ?? "–"}</b>
-          <span>Avg AQI · {aqiLabel(aqi)}</span>
+          <span>{t("Avg AQI · {label}", { label: aqiLabel(aqi) })}</span>
         </div>
       </div>
 
@@ -158,20 +159,20 @@ export function RouteCard({
           title={`Minutes where PM2.5 is above ${badAir.level} µg/m³ (India's CPCB scale)`}>
           <Icon name="clock" size={15} />
           <span>
-            <b>{badMin} min</b> in {badAir.label} <small>(above {badAir.level} µg/m³)</small>
-            {!fastest && fastBadMin != null && <small> · fastest route {fastBadMin} min</small>}
+            <b>{t("{n} min in {label}", { n: badMin, label: t(badAir.label) })}</b> <small>{t("(above {level} µg/m³)", { level: badAir.level })}</small>
+            {!fastest && fastBadMin != null && <small>{t(" · fastest route {n} min", { n: fastBadMin })}</small>}
           </span>
         </p>
       )}
 
       {route.highlights.length > 0 && (
         <div className="passes">
-          <span className="passes-title">You pass through</span>
+          <span className="passes-title">{t("You pass through")}</span>
           <ul className="highlights">
             {route.highlights.slice(0, 3).map((h, i) => (
               <li key={i} className={`hl hl-${h.kind}`}>
                 <Icon name={HL_ICON[h.kind]} size={17} />
-                <span>{h.text}</span>
+                <span>{tHighlight(h.text)}</span>
               </li>
             ))}
           </ul>
@@ -181,11 +182,13 @@ export function RouteCard({
       {selected && worst != null && (
         <p className="spots">
           <span className="spot-dot" aria-hidden />
-          {spots.length} pollution spot{spots.length === 1 ? "" : "s"} on the way, worst {worst} µg/m³ (marked on the map)
+          {spots.length === 1
+            ? t("1 pollution spot on the way, worst {w} µg/m³ (marked on the map)", { w: worst })
+            : t("{n} pollution spots on the way, worst {w} µg/m³ (marked on the map)", { n: spots.length, w: worst })}
         </p>
       )}
       {selected && route.coverage < 0.9 && (
-        <p className="rcard-note">Air-quality data covered {Math.round(route.coverage * 100)}% of this route.</p>
+        <p className="rcard-note">{t("Air-quality data covered {n}% of this route.", { n: Math.round(route.coverage * 100) })}</p>
       )}
 
       {selected && (
@@ -201,7 +204,7 @@ export function RouteCard({
             }}
           >
             <Icon name="navigate" size={18} />
-            Start in Google Maps
+            {t("Start in Google Maps")}
           </a>
           {onShare && (
             <button
@@ -211,10 +214,10 @@ export function RouteCard({
                 e.stopPropagation();
                 onShare();
               }}
-              aria-label="Share this route"
+              aria-label={t("Share this route")}
             >
               <Icon name="share" size={18} />
-              Share
+              {t("Share")}
             </button>
           )}
           {navigateHint && <p className="rcard-hint">{navigateHint}</p>}

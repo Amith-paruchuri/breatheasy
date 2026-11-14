@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { bestTime, type BestTimeResult } from "../api";
 import { pm25Color } from "../format";
+import { locale, t } from "../i18n";
 import type { RouteOut, TravelMode } from "../types";
 
 function timedPoints(route: RouteOut, max = 60) {
@@ -73,13 +74,13 @@ export function BestTime({
   const pct = data.cleaner_pct ?? 0;
   const msg =
     data.best_offset_min === 0 || pct < 5
-      ? "Leaving now is about as clean as it gets in the next 2 hours."
-      : `Leave at ${fmt(best.depart)} for about ${Math.round(pct)}% cleaner air on this route.`;
+      ? t("Leaving now is about as clean as it gets in the next 2 hours.")
+      : t("Leave at {t} for about {n}% cleaner air on this route.", { t: fmt(best.depart), n: Math.round(pct) });
 
   return (
-    <div className="besttime" aria-label="Best time to leave">
+    <div className="besttime" aria-label={t("Best time to leave")}>
       <div className="bt-head">
-        <span className="bt-title">Best time to leave</span>
+        <span className="bt-title">{t("Best time to leave")}</span>
         <span className={`bt-msg${data.best_offset_min !== 0 && pct >= 5 ? " good" : ""}`}>{msg}</span>
       </div>
       <div className="bt-row" role="list">
@@ -93,9 +94,9 @@ export function BestTime({
               className={`bt-slot${isBest ? " best" : ""}`}
               disabled={s.mean_pm25 == null || s.offset_min === 0}
               onClick={() => onPick(s.offset_min)}
-              title={s.offset_min === 0 ? "Leaving now" : `Plan this trip leaving at ${fmt(s.depart)}`}
+              title={s.offset_min === 0 ? t("Leaving now") : t("Plan this trip leaving at {t}", { t: fmt(s.depart) })}
             >
-              <span className="bt-time">{s.offset_min === 0 ? "Now" : fmt(s.depart)}</span>
+              <span className="bt-time">{s.offset_min === 0 ? t("Now") : fmt(s.depart)}</span>
               <span className="bt-val" style={{ borderColor: pm25Color(s.mean_pm25) }}>
                 {s.mean_pm25 == null ? "–" : Math.round(s.mean_pm25)}
               </span>
@@ -103,7 +104,7 @@ export function BestTime({
           );
         })}
       </div>
-      <span className="bt-note">Average PM2.5 (µg/m³) on this route by departure time, from the hourly forecast</span>
+      <span className="bt-note">{t("Average PM2.5 (µg/m³) on this route by departure time, from the hourly forecast")}</span>
     </div>
   );
 }
@@ -112,5 +113,5 @@ function fmt(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
   const d = new Date();
   d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit" });
 }
