@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/hero.svg" alt="Breatheasy: cleaner air on every trip in India, which way and when" width="100%">
+  <img src="docs/assets/hero.svg" alt="Breatheasy: the cleanest route, not just the fastest one" width="100%">
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-9FB0AA?style=for-the-badge"></a>
 </p>
 
-<p align="center"><b>Every navigation app picks the fastest road. Breatheasy picks the cleaner road, and the cleaner time to leave.</b><br>
+<p align="center"><b>Every navigation app shows you the fastest route. Breatheasy shows you the cleanest one.</b><br>
 Built by Dr Amith Paruchuri, final-year medical student at AIIMS New Delhi, for <i>Code for a Billion</i> (Climate track).</p>
 
 ---
@@ -18,30 +18,30 @@ Built by Dr Amith Paruchuri, final-year medical student at AIIMS New Delhi, for 
 
 <img src="docs/assets/problem.svg" alt="India is the 6th most polluted country; Delhi's PM2.5 is 20 times the WHO limit; Loni in Delhi-NCR is the most polluted city on Earth; 1.67 million deaths in India from air pollution in 2019" width="100%">
 
-Hundreds of millions of Indians breathe this air on the road every day: commuters, delivery riders, children on the school run. Pollution is not the same on every street, or at every hour. Nobody can see which way, or which time, is cleaner.
+Hundreds of millions of Indians breathe this air on the road every day: commuters, delivery riders, children on the school run. Pollution is not the same on every street: a busy main road carries far more exhaust than a lane beside a park. Yet every navigation app picks only the fastest route, and nobody can see which way is cleaner.
 
-## What makes Breatheasy different
+## The cleanest route, not the fastest
 
-<img src="docs/assets/where-when.svg" alt="A 2x2 grid: navigation apps ignore air; AQI apps know when but not which way; Breatheasy answers both which way and when" width="100%">
+<img src="docs/assets/fastest-vs-cleanest.svg" alt="Illustration: the fastest route runs along a busy main road with pollution spots; Breatheasy's cleanest route goes past a park and away from traffic" width="100%">
 
-| | Navigation apps | AQI apps and forecasts | **Breatheasy** |
+| | Navigation apps | AQI apps | **Breatheasy** |
 |---|:---:|:---:|:---:|
-| Which route has cleaner air | ✗ | ✗ | **✓** |
-| When to leave for cleaner air | ✗ | partly | **✓ for your exact route** |
-| Pollution spots on your route | ✗ | ✗ | **✓** |
+| **Cleanest route for your trip** | ✗ fastest only | ✗ | **✓** |
+| Pollution spots marked on your route | ✗ | ✗ | **✓** |
 | Stricter mode for asthma, pregnancy, children | ✗ | ✗ | **✓** |
 | Turn-by-turn navigation | ✓ | ✗ | **✓ via Google Maps, same streets** |
 | Checks itself against monitoring stations, in public | ✗ | ✗ | **✓** |
+| *Bonus:* best time to leave, for that exact route | ✗ | general forecast | **✓** |
 
 ## The app
 
 <img src="docs/assets/screens.png" alt="Breatheasy screens: routes coloured by PM2.5 with pollution spots, a route card with PM2.5, AQI and minutes in bad air, and the I'm sensitive setting" width="100%">
 
-- **Which way:** routes ranked by the PM2.5 you actually pass through, with red markers on the dirtiest stretches.
-- **When:** *Best time to leave* compares leaving now with 30, 60, 90 and 120 minutes later, for that same route. One tap re-plans.
-- **Who:** *I'm sensitive* keeps people with asthma, pregnant women, children and older adults further from busy roads.
-- **Just ask:** the commute agent understands *"reach Hauz Khas by 9 am on my cycle"* and picks the route and the departure time.
-- **Go:** one tap hands the exact route to Google Maps. Share it on WhatsApp. Works anywhere in India, installable on any phone.
+- **Cleanest route:** routes ranked by the PM2.5 you actually pass through, not by speed. Each shows its average PM2.5 and AQI and the minutes you would spend in very poor air.
+- **Pollution spots:** red markers on the dirtiest stretches, so you can see why one road is worse.
+- **I'm sensitive:** keeps people with asthma, pregnant women, children and older adults further from busy roads.
+- **Go:** one tap hands the exact route to Google Maps; Share sends it on WhatsApp. Works anywhere in India, installable on any phone.
+- **Extras:** a commute agent (*"reach Hauz Khas by 9 am on my cycle"*), and a *best time to leave* hint for the same route.
 
 ## How it works
 
@@ -51,19 +51,19 @@ Air comes from Google's Air Quality model (500 m grid, hourly forecast), adjuste
 
 ## Validation and real-world impact
 
-<img src="docs/assets/validation.svg" alt="85% right order against monitoring stations, correlation 0.87, 100% Google Maps match, up to 26% cleaner air by leaving at the best time" width="100%">
+<img src="docs/assets/validation.svg" alt="85% right order against monitoring stations, correlation 0.87, 100% Google Maps match, a cleaner route on 74% of Delhi trips" width="100%">
 
 | Check | What we measure | Result so far |
 |---|---|---|
 | **Monitoring stations** (every 3 hours) | Our estimate vs official station readings, same spot and hour | **85%** right order on 1,417 station pairs · r = **0.87** · 220 comparisons at 165 stations |
-| **Real commutes** (127 trips, 5 cities) | Does Google Maps follow the route we hand it? | **100%** median match, phone and computer |
-| **Best time to leave** | Same route, leaving now vs up to 2 hours later | up to **26%** cleaner; median **17%** in Mumbai |
-| **Cleaner routes** | Recommended vs fastest route | cleaner route on **74%** of Delhi trips, typically 3% cleaner for ~10 min |
+| **Cleanest route vs fastest** (127 trips, 5 cities) | Is there a route with cleaner air than the fastest one? | yes on **74%** of Delhi trips, typically ~3% cleaner for ~10 min |
+| **Real commutes** | Does Google Maps follow the cleanest route we hand it? | **100%** median match, phone and computer |
+| *Bonus:* best time to leave | Same route, leaving now vs up to 2 hours later | up to **26%** cleaner; median **17%** in Mumbai |
 | **People using it** | Searches, trips started on a cleaner route, departures moved to a cleaner time, "would you take it again?" | live, anonymous: [/stats](https://breatheasy-2lqwczvwyq-el.a.run.app/stats) |
 
 **See it yourself:** [live validation page](https://breatheasy-2lqwczvwyq-el.a.run.app/validation) · [raw numbers](https://breatheasy-2lqwczvwyq-el.a.run.app/api/validation/summary) · [method and limits](VALIDATION.md)
 
-We report modest numbers as they are: smog spreads across a city, so a route alone avoids only part of it. That is exactly why Breatheasy also tells you *when* to go.
+We report the numbers as they are, including the modest ones: smog spreads across a whole city, so the cleanest route avoids part of it, not all of it. Every limit is listed in [VALIDATION.md](VALIDATION.md).
 
 ## Built in AgentFoundry
 
