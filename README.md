@@ -12,6 +12,10 @@
 <p align="center"><b>Every navigation app shows you the fastest route. Breatheasy shows you the cleanest one.</b><br>
 Built by Dr Amith Paruchuri, final-year medical student at AIIMS New Delhi, for <i>Code for a Billion</i> (Climate track).</p>
 
+**▶ Try it in one click.** Each button opens the live app with a real trip already planned:
+
+<p align="center"><a href="https://breatheasy-2lqwczvwyq-el.a.run.app/?from=28.5672%2C77.2100&fl=AIIMS&to=28.6129%2C77.2295&tl=India+Gate&m=TWO_WHEELER&p=cleanest_air"><img src="https://img.shields.io/badge/%E2%96%B6_Delhi%3A_AIIMS_to_India_Gate-two--wheeler-3FD39A?style=for-the-badge" alt="Delhi: AIIMS to India Gate by two-wheeler"></a> <a href="https://breatheasy-2lqwczvwyq-el.a.run.app/?from=28.6675%2C77.2280&fl=Kashmere+Gate&to=28.6315%2C77.2167&tl=Connaught+Place&m=BICYCLE&p=cleanest_air"><img src="https://img.shields.io/badge/%E2%96%B6_Delhi%3A_Kashmere_Gate_to_CP-cycle-3FD39A?style=for-the-badge" alt="Delhi: Kashmere Gate to CP by cycle"></a> <a href="https://breatheasy-2lqwczvwyq-el.a.run.app/?from=19.0544%2C72.8406&fl=Bandra&to=19.1176%2C72.9060&tl=Powai&m=DRIVE&p=cleanest_air"><img src="https://img.shields.io/badge/%E2%96%B6_Mumbai%3A_Bandra_to_Powai-car-3FD39A?style=for-the-badge" alt="Mumbai: Bandra to Powai by car"></a></p>
+
 ---
 
 ## The problem
