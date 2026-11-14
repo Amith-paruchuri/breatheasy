@@ -19,16 +19,18 @@ The figures in this file are snapshots; the links above are always current.
 - *Correlation* (Pearson r), *typical error* (median absolute error), *bias* (average of estimate minus station), share within 25%.
 - *Street adjustment*: error at stations beside busy roads and beside parks, with and without the adjustment.
 
-**First run (13 Nov 2026):** 51 comparisons at 49 stations.
+**Snapshot (14 Nov 2026, after 5 runs):** 220 comparisons at 165 stations.
 
 | Measure | All cities | Delhi |
 |---|---|---|
-| Right order | 86% of 369 pairs | 86% of 215 pairs |
-| Correlation | 0.88 | 0.84 |
-| Typical error | ±18 µg/m³ | ±20 µg/m³ |
-| Bias | about 19 µg/m³ lower than stations | about 7 µg/m³ lower |
+| Right order | 85% of 1,417 pairs | 82% of 812 pairs |
+| Correlation | 0.87 | 0.72 |
+| Typical error | ±14 µg/m³ | ±22 µg/m³ |
+| Bias | about 9 µg/m³ lower than stations | |
 
-The model reads lower than stations on average. A consistent offset does not change which route is cleaner, which is why ordering is the headline measure. The street-adjustment check has only 4 stations so far, too few to judge; we will report it either way once there are enough.
+A consistent offset does not change which route is cleaner, which is why ordering is the headline measure.
+
+**Street adjustment, early and small:** beside parks and lakes (13 stations) the adjustment halved the typical error (from ±13 to ±8 µg/m³). Beside busy roads (5 stations) it overshot, reading higher than the stations, so the busy-road correction is probably too strong. We will retune it once there are more stations, and report it either way.
 
 ## 2. Trip benchmark: real commutes in five cities
 
@@ -36,9 +38,9 @@ The model reads lower than stations on average. A consistent offset does not cha
 
 **Method.** `POST /api/validation/benchmark` plans trips between well-known places (metro stations, hospitals, colleges, markets) in Delhi-NCR, Mumbai, Kolkata, Bengaluru and Hyderabad, on foot, by cycle and by two-wheeler, with distances suited to each mode. For each trip it records the fastest and the recommended route (average PM2.5, minutes in poor air, minutes beside busy roads and parks). It then sends the recommended route to Google's Routes API with exactly the pins that the app's "Start in Google Maps" link uses (3 on phones, up to 8 on computers) and measures how much of Google's path lies within 40 m of ours. Code: `backend/app/benchmark.py`; tests: `backend/tests/test_benchmark.py`.
 
-**Results so far (45+ trips):**
+**Results so far (127 trips):**
 - **Google Maps follows our route: median 100%** of Google's path within 40 m of Breatheasy's, on phones and on computers.
-- **Cleaner routes:** in Delhi-NCR a cleaner route than the fastest existed on 78% of trips, typically about 9 µg/m³ (3%) cleaner for about 14 extra minutes. In the other four cities the fastest route was usually also the cleanest at our threshold.
+- **Cleaner routes:** in Delhi-NCR a cleaner route than the fastest existed on 74% of trips, typically about 9 µg/m³ (3%) cleaner for about 10 extra minutes. In the other four cities the fastest route was usually also the cleanest at our threshold.
 
 We state the modest route gains plainly: smog spreads across a whole city, so any one route can only avoid part of it. That is why timing is measured too.
 
@@ -48,7 +50,7 @@ We state the modest route gains plainly: smog spreads across a whole city, so an
 
 **Method.** For each benchmark trip, the recommended route is scored leaving now and in 30, 60, 90 and 120 minutes, from Google's hourly forecast along the route (`backend/app/besttime.py`, `POST /api/best-time`).
 
-**Results so far (evening runs):** waiting up to two hours gave at least 10% cleaner air on 12.8% of trips, and up to 26%. Runs at other times of day are being added.
+**Results so far:** waiting up to two hours gave at least 10% cleaner air on 12.8% of trips, and up to 26%. It varies by city and hour: in Mumbai the median gain from leaving at the best time was 17%; in Delhi's evening smog it was usually best to leave now.
 
 ## 4. What people do with it (behaviour, not just visits)
 
