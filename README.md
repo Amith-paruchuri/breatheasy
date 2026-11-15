@@ -71,6 +71,14 @@ Air comes from Google's Air Quality model (500 m grid, hourly forecast), adjuste
 
 We report the numbers as they are, including the modest ones: smog spreads across a whole city, so the cleanest route avoids part of it, not all of it. Every limit is listed in [VALIDATION.md](VALIDATION.md).
 
+### What pulmonologists say
+
+[![Dr Pavan Kalyan, Pulmonary Medicine, AIIMS New Delhi, on Breatheasy](https://img.youtube.com/vi/YAE74GMxgLw/hqdefault.jpg)](https://youtube.com/shorts/YAE74GMxgLw)
+
+**Dr Pavan Kalyan, Pulmonary Medicine, AIIMS New Delhi** (40 s): why a cleanest-route app matters for patients with asthma and COPD. [Watch](https://youtube.com/shorts/YAE74GMxgLw)
+
+A pilot randomised trial of Breatheasy in adults with asthma during their daily commute (portable PM2.5 sensor, Asthma Control Test, reliever use) is being prepared with pulmonologists at AIIMS New Delhi for the January 2027 smog season.
+
 ## Built in AgentFoundry
 
 The project lives in the AgentFoundry IDE. The commute agent ([`backend/app/agent.py`](backend/app/agent.py), with [tests](backend/tests/test_agent.py)) was built there with the Gemini CLI: the plain-language parser, the departure-time search and its tests.
