@@ -73,9 +73,9 @@ We report the numbers as they are, including the modest ones: smog spreads acros
 
 ### What pulmonologists say
 
-[![Dr Pavan Kalyan, Pulmonary Medicine, AIIMS New Delhi, on Breatheasy](https://img.youtube.com/vi/YAE74GMxgLw/hqdefault.jpg)](https://youtube.com/shorts/YAE74GMxgLw)
+<a href="https://youtube.com/shorts/YAE74GMxgLw"><img alt="Watch: Dr Pavan Kalyan, pulmonologist, AIIMS New Delhi" src="https://img.shields.io/badge/▶_watch-Dr_Pavan_Kalyan,_Pulmonary_Medicine,_AIIMS_New_Delhi-E5484D?style=for-the-badge"></a>
 
-**Dr Pavan Kalyan, Pulmonary Medicine, AIIMS New Delhi** (40 s): why a cleanest-route app matters for patients with asthma and COPD. [Watch](https://youtube.com/shorts/YAE74GMxgLw)
+**Dr Pavan Kalyan, Pulmonary Medicine, AIIMS New Delhi** (40 s): why a cleanest-route app matters for patients with asthma and COPD.
 
 A pilot randomised trial of Breatheasy in adults with asthma during their daily commute (portable PM2.5 sensor, Asthma Control Test, reliever use) is being prepared with pulmonologists at AIIMS New Delhi for the January 2027 smog season.
 
